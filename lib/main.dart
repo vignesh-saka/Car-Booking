@@ -1,3 +1,4 @@
+import 'package:bookmycar/Screens/Publish_Ride_Screens/publishsucess_screen.dart';
 import 'package:bookmycar/pages/splash_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: SplashScreen()
+      home: PublishsucessScreen()
     );
   } 
 }
