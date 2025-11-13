@@ -1,3 +1,9 @@
+import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.dart';
+import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
+import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
+import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
+import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
+import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -58,8 +64,47 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void handleSearch() {
-    // TODO: Connect to backend API
-    // Example API call structure:
+    // Validate inputs
+    if (fromController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please enter departure city',
+            style: GoogleFonts.lexend(),
+          ),
+          backgroundColor: const Color(0xFFFF3B30),
+        ),
+      );
+      return;
+    }
+
+    if (toController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please enter destination city',
+            style: GoogleFonts.lexend(),
+          ),
+          backgroundColor: const Color(0xFFFF3B30),
+        ),
+      );
+      return;
+    }
+
+    if (dateController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select date',
+            style: GoogleFonts.lexend(),
+          ),
+          backgroundColor: const Color(0xFFFF3B30),
+        ),
+      );
+      return;
+    }
+
+    // TODO: Connect to backend API to fetch available rides
     /*
     final response = await http.post(
       Uri.parse('YOUR_API_ENDPOINT/search'),
@@ -78,6 +123,19 @@ class _SearchScreenState extends State<SearchScreen> {
     print('To: ${toController.text}');
     print('Date: ${dateController.text}');
     print('Passengers: $passengers');
+
+    // Navigate to Available Rides Screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AvailableRidesScreen(
+          from: fromController.text,
+          to: toController.text,
+          date: dateController.text,
+          passengers: passengers,
+        ),
+      ),
+    );
   }
 
   void onNavItemTapped(int index) {
@@ -86,6 +144,45 @@ class _SearchScreenState extends State<SearchScreen> {
     });
     // TODO: Navigate to respective screens
     print('Navigated to index: $index');
+    switch (index) {
+    case 0:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => PublishRideScreen()),
+      );
+      break;
+
+    case 1:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => MyBookingsScreen()),
+      );
+      break;
+
+    case 2:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SearchScreen()),
+      );
+      break;
+
+    case 3:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => HistoryScreen()),
+      );
+      break;
+
+    case 4:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+      );
+      break;
+
+    default:
+      break;
+  }
   }
 
   @override
@@ -352,77 +449,23 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       ),
 
-       // Bottom Navigation
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.02,
-              vertical: screenHeight * 0.012,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                NavBarItem(
-                  icon: Icons.add,
-                  label: 'Publish',
-                  isSelected: selectedIndex == 0,
-                  screenWidth: screenWidth,
-                  onTap: () => {onNavItemTapped(0)},
-                ),
-                NavBarItem(
-                  icon: Icons.airplane_ticket_outlined,
-                  label: 'My Bookings',
-                  isSelected: selectedIndex == 1,
-                  screenWidth: screenWidth,
-                  onTap: () => {onNavItemTapped(1)},
-                ),
-                NavBarItem(
-                  icon: Icons.search,
-                  label: 'Search',
-                  isSelected: selectedIndex == 2,
-                  screenWidth: screenWidth,
-                  onTap: () => {onNavItemTapped(2)},
-                ),
-                NavBarItem(
-                  icon: Icons.menu,
-                  label: 'History',
-                  isSelected: selectedIndex == 3,
-                  screenWidth: screenWidth,
-                  onTap: () => {onNavItemTapped(3)},
-                ),
-                NavBarItem(
-                  icon: Icons.person_outline,
-                  label: 'Profile',
-                  isSelected: selectedIndex == 4,
-                  screenWidth: screenWidth,
-                  onTap: () => {onNavItemTapped(4)},
-                ),
-              ],
-            ),
-          ),
-        ),
+      // Bottom Navigation
+      bottomNavigationBar: BottomNavigation(
+        selectedIndex: selectedIndex,
+        onItemTapped: onNavItemTapped,
+        screenWidth: screenWidth,
+        screenHeight: screenHeight,
       ),
     );
   }
 }
+
 class RecentRide {
   final String from;
   final String to;
 
   RecentRide({required this.from, required this.to});
 
-  // Factory constructor for JSON parsing
   factory RecentRide.fromJson(Map<String, dynamic> json) {
     return RecentRide(from: json['from'], to: json['to']);
   }
@@ -511,71 +554,3 @@ class RecentRideItem extends StatelessWidget {
   }
 }
 
-class NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final double screenWidth;
-  final VoidCallback? onTap;
-
-  const NavBarItem({
-    super.key,
-    required this.icon,
-    required this.label,
-    this.isSelected = false,
-    required this.screenWidth,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.025,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(50),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFFF4444) : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.white : Colors.black87,
-                size: screenWidth * 0.058,
-              ),
-            ),
-            SizedBox(height: 5),
-            Text(
-              label,
-              style: GoogleFonts.lexend(
-                fontSize: screenWidth * 0.029,
-                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                color: Colors.black87,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
