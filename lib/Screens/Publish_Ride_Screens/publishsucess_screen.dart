@@ -1,3 +1,4 @@
+import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -42,30 +43,34 @@ class PublishsucessScreen extends StatelessWidget {
                               color: Colors.white,
                             ),
                           ),
-                          
                         ),
                         Center(
                           child: Text(
-                              'Kindly check Requests in History Section',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.035,
-                                color: Colors.white,
-                              ),
+                            'Kindly check Requests in History Section',
+                            style: GoogleFonts.lexend(
+                              fontSize: screenWidth * 0.035,
+                              color: Colors.white,
                             ),
+                          ),
                         ),
                         SizedBox(height: screenHeight * 0.25),
                         Center(
                           child: TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const HistoryScreen(),
+                                ),
+                              );
+                            },
                             child: Text(
                               'Go To History Section',
                               style: GoogleFonts.lexend(
                                 fontSize: screenWidth * 0.035,
                                 color: Colors.white,
-                                decoration: TextDecoration
-                                    .underline,
-                                decorationColor: Colors
-                                    .white,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Colors.white,
                                 decorationThickness: 2,
                               ),
                             ),

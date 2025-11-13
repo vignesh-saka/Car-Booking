@@ -2,6 +2,7 @@ import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
 import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
+import 'package:bookmycar/Screens/Publish_Ride_Screens/publishsucess_screen.dart';
 import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,6 +24,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
   final TextEditingController timingsController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
   final TextEditingController pickupTimeController = TextEditingController();
+  final TextEditingController dropTimeController = TextEditingController();
   final TextEditingController pickupPlaceController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
@@ -132,6 +134,11 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
     print('To: ${toCityController.text}');
     print('Passengers: $passengers');
     print('Price: ${priceController.text}');
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PublishsucessScreen()),
+    );
   }
 
   void onNavItemTapped(int index) {
@@ -140,44 +147,44 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
     });
     print('Navigated to index: $index');
     switch (index) {
-    case 0:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => PublishRideScreen()),
-      );
-      break;
+      case 0:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PublishRideScreen()),
+        );
+        break;
 
-    case 1:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => MyBookingsScreen()),
-      );
-      break;
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => MyBookingsScreen()),
+        );
+        break;
 
-    case 2:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SearchScreen()),
-      );
-      break;
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => SearchScreen()),
+        );
+        break;
 
-    case 3:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HistoryScreen()),
-      );
-      break;
+      case 3:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => HistoryScreen()),
+        );
+        break;
 
-    case 4:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ProfileScreen()),
-      );
-      break;
+      case 4:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ProfileScreen()),
+        );
+        break;
 
-    default:
-      break;
-  }
+      default:
+        break;
+    }
   }
 
   @override
@@ -410,6 +417,15 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.012),
+                        Text(
+                          'Date',
+                          style: GoogleFonts.lexend(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.012),
                         _buildTextField(
                           'Enter Date',
                           dateController,
@@ -444,7 +460,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
 
                         // Drop Place
                         Text(
-                          'Drop Place',
+                          'Drop Time',
                           style: GoogleFonts.lexend(
                             fontSize: screenWidth * 0.04,
                             fontWeight: FontWeight.w500,
@@ -453,10 +469,13 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                         ),
                         SizedBox(height: screenHeight * 0.012),
                         _buildTextField(
-                          'Enter Pickup Place',
-                          pickupPlaceController,
+                          'Enter Drop Time',
+                          dropTimeController,
                           screenWidth,
                           screenHeight,
+                          readOnly: true,
+                          onTap: () => selectTime(dropTimeController),
+                          suffixIcon: Icons.access_time,
                         ),
                         SizedBox(height: screenHeight * 0.02),
 
@@ -670,4 +689,3 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
     priceController.text = '500'; // Default price
   }
 }
-

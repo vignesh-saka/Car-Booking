@@ -1,5 +1,10 @@
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/ride_detail_screen.dart';
-import 'package:bookmycar/Screens/Comman/nav_bar_item.dart';
+import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
+import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
+import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
+import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
+import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
+import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -62,14 +67,87 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
       price: 600,
       date: 'Mon 12 November 2025',
     ),
+    RideData(
+      departureTime: '05:00 PM',
+      arrivalTime: '07:00 PM',
+      fromCity: 'Hyderabad',
+      toCity: 'Karimnagar',
+      driverName: 'Vignesh Kumar Saka',
+      driverPhone: '+91 9392782895',
+      totalSeats: 4,
+      bookedSeats: 0,
+      price: 600,
+      date: 'Mon 12 November 2025',
+    ),
+    RideData(
+      departureTime: '05:00 PM',
+      arrivalTime: '07:00 PM',
+      fromCity: 'Hyderabad',
+      toCity: 'Karimnagar',
+      driverName: 'Vignesh Kumar Saka',
+      driverPhone: '+91 9392782895',
+      totalSeats: 4,
+      bookedSeats: 0,
+      price: 600,
+      date: 'Mon 12 November 2025',
+    ),
+    RideData(
+      departureTime: '05:00 PM',
+      arrivalTime: '07:00 PM',
+      fromCity: 'Hyderabad',
+      toCity: 'Karimnagar',
+      driverName: 'Vignesh Kumar Saka',
+      driverPhone: '+91 9392782895',
+      totalSeats: 4,
+      bookedSeats: 0,
+      price: 600,
+      date: 'Mon 12 November 2025',
+    ),
   ];
 
   void onNavItemTapped(int index) {
     setState(() {
       selectedIndex = index;
     });
-    // TODO: Navigate to respective screens
-    print('Navigated to index: $index');
+    switch (index) {
+    case 0:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => PublishRideScreen()),
+      );
+      break;
+
+    case 1:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => MyBookingsScreen()),
+      );
+      break;
+
+    case 2:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SearchScreen()),
+      );
+      break;
+
+    case 3:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => HistoryScreen()),
+      );
+      break;
+
+    case 4:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ProfileScreen()),
+      );
+      break;
+
+    default:
+      break;
+  }
   }
 
   void onRideSelected(RideData ride) {
@@ -92,19 +170,19 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Red Header
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFF3B30),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(25),
-                  bottomRight: Radius.circular(25),
-                ),
-              ),
-              child: Padding(
+        child: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFF3B30),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(25),
+              bottomRight: Radius.circular(25),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Red Header part
+              Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: screenWidth * 0.05,
                   vertical: screenHeight * 0.025,
@@ -138,127 +216,81 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(width: screenWidth * 0.09),
+                    SizedBox(width: screenWidth * 0.01),
                   ],
                 ),
               ),
-            ),
 
-            // Subtitle
-            Padding(
-              padding: EdgeInsets.all(screenWidth * 0.05),
-              child: Text(
-                'Book a Safe & Enjoy Ride',
-                style: GoogleFonts.lexend(
-                  fontSize: screenWidth * 0.04,
-                  color: Colors.grey[600],
+              // Subtitle inside the same red container
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.05,
+                  vertical: screenHeight * 0.012,
+                ),
+                child: Text(
+                  'Book a Safe & Enjoy Ride',
+                  style: GoogleFonts.lexend(
+                    fontSize: screenWidth * 0.04,
+                    color: Colors.grey[200], // maybe lighter so it shows on red
+                  ),
                 ),
               ),
-            ),
 
-            // Rides List
-            Expanded(
-              child: availableRides.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            size: screenWidth * 0.2,
-                            color: Colors.grey[400],
+              SizedBox(width: screenWidth * 0.09),
+
+              // Rides list area inside red container
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.05,
+                    vertical: screenHeight * 0.01,
+                  ),
+                  child: availableRides.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: screenWidth * 0.2,
+                                color: Colors.grey[400],
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Text(
+                                'No rides available',
+                                style: GoogleFonts.lexend(
+                                  fontSize: screenWidth * 0.045,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: screenHeight * 0.02),
-                          Text(
-                            'No rides available',
-                            style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.045,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.05,
-                        vertical: screenHeight * 0.01,
-                      ),
-                      itemCount: availableRides.length,
-                      itemBuilder: (context, index) {
-                        return RideCard(
-                          ride: availableRides[index],
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onTap: () => onRideSelected(availableRides[index]),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                        )
+                      : ListView.builder(
+                          itemCount: availableRides.length,
+                          itemBuilder: (context, index) {
+                            return RideCard(
+                              ride: availableRides[index],
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onTap: () =>
+                                  onRideSelected(availableRides[index]),
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
 
       // Bottom Navigation
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.02,
-              vertical: screenHeight * 0.012,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                NavBarItem(
-                  icon: Icons.add,
-                  label: 'Publish',
-                  isSelected: selectedIndex == 0,
-                  screenWidth: screenWidth,
-                  onTap: () => onNavItemTapped(0),
-                ),
-                NavBarItem(
-                  icon: Icons.airplane_ticket_outlined,
-                  label: 'My Bookings',
-                  isSelected: selectedIndex == 1,
-                  screenWidth: screenWidth,
-                  onTap: () => onNavItemTapped(1),
-                ),
-                NavBarItem(
-                  icon: Icons.search,
-                  label: 'Search',
-                  isSelected: selectedIndex == 2,
-                  screenWidth: screenWidth,
-                  onTap: () => onNavItemTapped(2),
-                ),
-                NavBarItem(
-                  icon: Icons.menu,
-                  label: 'History',
-                  isSelected: selectedIndex == 3,
-                  screenWidth: screenWidth,
-                  onTap: () => onNavItemTapped(3),
-                ),
-                NavBarItem(
-                  icon: Icons.person_outline,
-                  label: 'Profile',
-                  isSelected: selectedIndex == 4,
-                  screenWidth: screenWidth,
-                  onTap: () => onNavItemTapped(4),
-                ),
-              ],
-            ),
-          ),
-        ),
+      bottomNavigationBar: BottomNavigation(
+        selectedIndex: selectedIndex,
+        onItemTapped: onNavItemTapped,
+        screenWidth: screenWidth,
+        screenHeight: screenHeight,
       ),
     );
   }
@@ -420,10 +452,7 @@ class RideCard extends StatelessWidget {
               ],
             ),
 
-            Divider(
-              height: screenHeight * 0.025,
-              color: Colors.grey[300],
-            ),
+            Divider(height: screenHeight * 0.025, color: Colors.grey[300]),
 
             // Driver Info
             Row(
@@ -477,4 +506,3 @@ class RideCard extends StatelessWidget {
     );
   }
 }
-
