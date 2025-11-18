@@ -43,30 +43,7 @@ class _SearchScreenState extends State<SearchScreen> {
   int passengers = 1;
   int selectedIndex = 2;
 
-<<<<<<< HEAD
-  // Recent rides (sample)
-=======
-  /// SAME CITY LIST (copied from PublishRideScreen)
-  List<String> cities = [
-    "Hyderabad",
-    "Chennai",
-    "Mumbai",
-    "Delhi",
-    "Pune",
-    "Bengaluru",
-    "Kolkata",
-  ];
-
-  /// FILTERED SEARCH LISTS
-  List<String> filteredFromCities = [];
-  List<String> filteredToCities = [];
-
-  /// Show dropdowns
-  bool showFromDropdown = false;
-  bool showToDropdown = false;
-
   // Backend data - replace with actual API call
->>>>>>> 23c31bbd1c0c81e875c48de1645fd908d8d13ee1
   List<RecentRide> recentRides = [
     RecentRide(from: 'Hyderabad', to: 'Karimnagar'),
     RecentRide(from: 'Karimnagar', to: 'Hyderabad'),
@@ -164,12 +141,6 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
 
-<<<<<<< HEAD
-    debugPrint('Search clicked: from=${fromController.text}, to=${toController.text}, date=${dateController.text}, pax=$passengers');
-
-    // Navigate to AvailableRidesScreen (you can pass lat/lng if needed)
-=======
->>>>>>> 23c31bbd1c0c81e875c48de1645fd908d8d13ee1
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -188,26 +159,6 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       selectedIndex = index;
     });
-<<<<<<< HEAD
-    debugPrint('Navigated to index: $index');
-    switch (index) {
-      case 0:
-        Navigator.push(context, MaterialPageRoute(builder: (c) => PublishRideScreen()));
-        break;
-      case 1:
-        Navigator.push(context, MaterialPageRoute(builder: (c) => MyBookingsScreen()));
-        break;
-      case 2:
-        // currently in search, you might want to pop instead
-        break;
-      case 3:
-        Navigator.push(context, MaterialPageRoute(builder: (c) => HistoryScreen()));
-        break;
-      case 4:
-        Navigator.push(context, MaterialPageRoute(builder: (c) => ProfileScreen()));
-        break;
-      default:
-=======
 
     switch (index) {
       case 0:
@@ -217,27 +168,32 @@ class _SearchScreenState extends State<SearchScreen> {
         Navigator.push(context, MaterialPageRoute(builder: (context) => MyBookingsScreen()));
         break;
       case 2:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => SearchScreen()));
+        // already in search
         break;
       case 3:
         Navigator.push(context, MaterialPageRoute(builder: (context) => HistoryScreen()));
         break;
       case 4:
         Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen()));
->>>>>>> 23c31bbd1c0c81e875c48de1645fd908d8d13ee1
         break;
     }
   }
 
-<<<<<<< HEAD
-  // Autocomplete input handlers
-  void _onFromChanged(String input) => _onInputChanged(input, isFrom: true);
-  void _onToChanged(String input) => _onInputChanged(input, isFrom: false);
+  // ------------------- Autocomplete helpers -------------------
+
+  void _onFromChanged(String input) {
+    _onInputChanged(input, isFrom: true);
+  }
+
+  void _onToChanged(String input) {
+    _onInputChanged(input, isFrom: false);
+  }
 
   void _onInputChanged(String input, {required bool isFrom}) {
     final trimmed = input.trim();
     _debounceTimer?.cancel();
 
+    // hide suggestions if less than 3 chars
     if (trimmed.length < 3) {
       setState(() {
         if (isFrom) {
@@ -272,7 +228,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
     try {
       setState(() {
-        if (isFrom) _isLoadingFrom = true; else _isLoadingTo = true;
+        if (isFrom) {
+          _isLoadingFrom = true;
+        } else {
+          _isLoadingTo = true;
+        }
       });
 
       final response = await http.get(Uri.parse(request));
@@ -284,12 +244,13 @@ class _SearchScreenState extends State<SearchScreen> {
 
         if (status == 'OK') {
           final List predictions = data['predictions'] ?? [];
-          final List<PlacePrediction> suggestions = predictions.map<PlacePrediction>((p) {
-            return PlacePrediction(
-              description: (p['description'] ?? '') as String,
-              placeId: (p['place_id'] ?? '') as String,
-            );
-          }).where((p) => p.description.isNotEmpty && p.placeId.isNotEmpty).toList();
+          final List<PlacePrediction> suggestions = predictions
+              .map<PlacePrediction>((p) => PlacePrediction(
+                    description: (p['description'] ?? '') as String,
+                    placeId: (p['place_id'] ?? '') as String,
+                  ))
+              .where((p) => p.description.isNotEmpty && p.placeId.isNotEmpty)
+              .toList();
 
           setState(() {
             if (isFrom) {
@@ -302,7 +263,13 @@ class _SearchScreenState extends State<SearchScreen> {
           });
         } else if (status == 'ZERO_RESULTS') {
           setState(() {
-            if (isFrom) { fromSuggestions = []; showFromSuggestions = false; } else { toSuggestions = []; showToSuggestions = false; }
+            if (isFrom) {
+              fromSuggestions = [];
+              showFromSuggestions = false;
+            } else {
+              toSuggestions = [];
+              showToSuggestions = false;
+            }
           });
         } else {
           debugPrint('Autocomplete API status: $status');
@@ -312,23 +279,45 @@ class _SearchScreenState extends State<SearchScreen> {
             );
           }
           setState(() {
-            if (isFrom) { fromSuggestions = []; showFromSuggestions = false; } else { toSuggestions = []; showToSuggestions = false; }
+            if (isFrom) {
+              fromSuggestions = [];
+              showFromSuggestions = false;
+            } else {
+              toSuggestions = [];
+              showToSuggestions = false;
+            }
           });
         }
       } else {
         debugPrint('Autocomplete HTTP error: ${response.statusCode}');
         setState(() {
-          if (isFrom) { fromSuggestions = []; showFromSuggestions = false; } else { toSuggestions = []; showToSuggestions = false; }
+          if (isFrom) {
+            fromSuggestions = [];
+            showFromSuggestions = false;
+          } else {
+            toSuggestions = [];
+            showToSuggestions = false;
+          }
         });
       }
     } catch (e, st) {
       debugPrint('Autocomplete exception: $e\n$st');
       setState(() {
-        if (isFrom) { fromSuggestions = []; showFromSuggestions = false; } else { toSuggestions = []; showToSuggestions = false; }
+        if (isFrom) {
+          fromSuggestions = [];
+          showFromSuggestions = false;
+        } else {
+          toSuggestions = [];
+          showToSuggestions = false;
+        }
       });
     } finally {
       setState(() {
-        if (isFrom) _isLoadingFrom = false; else _isLoadingTo = false;
+        if (isFrom) {
+          _isLoadingFrom = false;
+        } else {
+          _isLoadingTo = false;
+        }
       });
     }
   }
@@ -374,7 +363,7 @@ class _SearchScreenState extends State<SearchScreen> {
             }
           });
 
-          // Reset session token after a successful selection
+          // Reset session token after selection
           _sessionToken = null;
         } else {
           debugPrint('Place Details API status: $status');
@@ -384,116 +373,89 @@ class _SearchScreenState extends State<SearchScreen> {
             );
           }
           setState(() {
-            if (isFrom) { fromSuggestions = []; showFromSuggestions = false; } else { toSuggestions = []; showToSuggestions = false; }
+            if (isFrom) {
+              fromSuggestions = [];
+              showFromSuggestions = false;
+            } else {
+              toSuggestions = [];
+              showToSuggestions = false;
+            }
           });
         }
       } else {
         debugPrint('Place Details HTTP error: ${response.statusCode}');
         setState(() {
-          if (isFrom) { fromSuggestions = []; showFromSuggestions = false; } else { toSuggestions = []; showToSuggestions = false; }
+          if (isFrom) {
+            fromSuggestions = [];
+            showFromSuggestions = false;
+          } else {
+            toSuggestions = [];
+            showToSuggestions = false;
+          }
         });
       }
     } catch (e, st) {
       debugPrint('Place Details exception: $e\n$st');
       setState(() {
-        if (isFrom) { fromSuggestions = []; showFromSuggestions = false; } else { toSuggestions = []; showToSuggestions = false; }
+        if (isFrom) {
+          fromSuggestions = [];
+          showFromSuggestions = false;
+        } else {
+          toSuggestions = [];
+          showToSuggestions = false;
+        }
       });
     }
   }
 
-  // UI building helpers for autocomplete fields
-  Widget _buildAutocompleteField({
-    required String hint,
-    required TextEditingController controller,
+  // ---------------- UI helpers ----------------
+
+  Widget _buildAutocompleteBox({
+    required List<PlacePrediction> suggestions,
+    required bool show,
+    required bool isLoading,
     required double screenWidth,
     required double screenHeight,
-    required Function(String) onChanged,
-    required List<PlacePrediction> suggestions,
-    required bool showSuggestions,
-    required Function(PlacePrediction) onSuggestionTap,
-    required bool isLoading,
+    required Function(PlacePrediction) onTap,
   }) {
-    return Column(
-      children: [
-        TextField(
-          controller: controller,
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.lexend(color: Colors.grey[400], fontSize: screenWidth * 0.038),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.018),
-          ),
-          style: GoogleFonts.lexend(fontSize: screenWidth * 0.04),
-        ),
-        if (isLoading)
-          Container(
-            margin: EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-            child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-          )
-        else if (showSuggestions && suggestions.isNotEmpty)
-          Container(
-            margin: EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 2)),
-              ],
-            ),
-            constraints: BoxConstraints(maxHeight: 180),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: suggestions.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final p = suggestions[index];
-                return ListTile(
-                  title: Text(p.description, style: GoogleFonts.lexend(fontSize: screenWidth * 0.038)),
-                  onTap: () => onSuggestionTap(p),
-                );
-              },
-            ),
-          ),
-      ],
-=======
-  // ----------------------------------------------------------
-  // DROPDOWN BOX (EXACTLY SAME AS PUBLISH SCREEN)
-  // ----------------------------------------------------------
-  Widget buildDropdown(List<String> results, Function(String) onSelect) {
+    if (!show || suggestions.isEmpty) return const SizedBox.shrink();
+    
+    if (isLoading) {
+      return Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+      );
+    }
+
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 6, bottom: 10),
-      constraints: const BoxConstraints(maxHeight: 200),
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 2))],
       ),
-      child: ListView.builder(
+      constraints: BoxConstraints(maxHeight: 180),
+      child: ListView.separated(
         shrinkWrap: true,
-        itemCount: results.length,
+        itemCount: suggestions.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: (context, index) {
-          return InkWell(
-            onTap: () => onSelect(results[index]),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(results[index], style: const TextStyle(fontSize: 16)),
-            ),
+          final p = suggestions[index];
+          return ListTile(
+            title: Text(p.description, style: GoogleFonts.lexend(fontSize: screenWidth * 0.038)),
+            onTap: () => onTap(p),
           );
         },
       ),
->>>>>>> 23c31bbd1c0c81e875c48de1645fd908d8d13ee1
     );
   }
 
+  // ----------------------------------------------------------
+  // ----------------------- BUILD ----------------------------
+  // ----------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -501,397 +463,165 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
-<<<<<<< HEAD
         child: SingleChildScrollView(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Red Header
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFF3B30),
-                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ========================= HEADER ===========================
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFF3B30),
+                  borderRadius: BorderRadius.only(bottomLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.04),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Text('Find a Ride?', style: GoogleFonts.lexend(fontSize: screenWidth * 0.065, fontWeight: FontWeight.w600, color: Colors.white)),
+                      ),
+                      SizedBox(height: screenHeight * 0.025),
+                      Text('Where are you going?', style: GoogleFonts.lexend(fontSize: screenWidth * 0.04, color: Colors.white)),
+                      SizedBox(height: screenHeight * 0.012),
+
+                      // ================= FROM FIELD =================
+                      Text('From', style: GoogleFonts.lexend(fontSize: screenWidth * 0.035, color: Colors.white)),
+                      SizedBox(height: 8),
+
+                      TextField(
+                        controller: fromController,
+                        onTap: () {
+                          // if already typed 3+ chars, fetch suggestions
+                          if ((fromController.text).trim().length >= 3) {
+                            _onFromChanged(fromController.text);
+                          }
+                        },
+                        onChanged: (value) => _onFromChanged(value),
+                        decoration: InputDecoration(
+                          hintText: 'Enter City Name',
+                          hintStyle: GoogleFonts.lexend(color: Colors.grey[400], fontSize: screenWidth * 0.038),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.018),
+                        ),
+                      ),
+
+                      // Places suggestions
+                      if (showFromSuggestions)
+                        _buildAutocompleteBox(
+                          suggestions: fromSuggestions,
+                          show: showFromSuggestions,
+                          isLoading: _isLoadingFrom,
+                          screenWidth: screenWidth,
+                          screenHeight: screenHeight,
+                          onTap: (p) => fetchPlaceDetailsAndSet(p.placeId, isFrom: true),
+                        ),
+
+                      SizedBox(height: screenHeight * 0.02),
+
+                      // ================= TO FIELD =================
+                      Text('To', style: GoogleFonts.lexend(fontSize: screenWidth * 0.035, color: Colors.white)),
+                      SizedBox(height: 8),
+                      TextField(
+                        controller: toController,
+                        onTap: () {
+                          if ((toController.text).trim().length >= 3) {
+                            _onToChanged(toController.text);
+                          }
+                        },
+                        onChanged: (value) => _onToChanged(value),
+                        decoration: InputDecoration(
+                          hintText: 'Enter City Name',
+                          hintStyle: GoogleFonts.lexend(color: Colors.grey[400], fontSize: screenWidth * 0.038),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.018),
+                        ),
+                      ),
+
+                      if (showToSuggestions)
+                        _buildAutocompleteBox(
+                          suggestions: toSuggestions,
+                          show: showToSuggestions,
+                          isLoading: _isLoadingTo,
+                          screenWidth: screenWidth,
+                          screenHeight: screenHeight,
+                          onTap: (p) => fetchPlaceDetailsAndSet(p.placeId, isFrom: false),
+                        ),
+
+                      SizedBox(height: screenHeight * 0.02),
+
+                      // ================= DATE =================
+                      Text('Date', style: GoogleFonts.lexend(fontSize: screenWidth * 0.035, color: Colors.white)),
+                      SizedBox(height: 8),
+                      TextField(
+                        controller: dateController,
+                        readOnly: true,
+                        onTap: selectDate,
+                        decoration: InputDecoration(
+                          hintText: 'Enter Date',
+                          hintStyle: GoogleFonts.lexend(color: Colors.grey[400], fontSize: screenWidth * 0.038),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.018),
+                          suffixIcon: const Icon(Icons.calendar_today),
+                        ),
+                      ),
+
+                      SizedBox(height: screenHeight * 0.02),
+
+                      // ================= PASSENGERS =================
+                      Text('No. of Passengers', style: GoogleFonts.lexend(fontSize: screenWidth * 0.035, color: Colors.white)),
+                      SizedBox(height: screenHeight * 0.012),
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: decrementPassengers,
+                            child: Container(width: screenWidth * 0.1, height: screenWidth * 0.1, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.remove, color: Color(0xFFFF4444))),
+                          ),
+                          SizedBox(width: screenWidth * 0.04),
+                          Text('$passengers', style: GoogleFonts.lexend(fontSize: screenWidth * 0.05, fontWeight: FontWeight.w600, color: Colors.white)),
+                          SizedBox(width: screenWidth * 0.04),
+                          GestureDetector(
+                            onTap: incrementPassengers,
+                            child: Container(width: screenWidth * 0.1, height: screenWidth * 0.1, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.add, color: Color(0xFFFF4444))),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: screenHeight * 0.025),
+
+                      // ================= SEARCH BUTTON =================
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: handleSearch,
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.white, padding: EdgeInsets.symmetric(vertical: screenHeight * 0.018), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                          child: Text('Search', style: GoogleFonts.lexend(fontSize: screenWidth * 0.045, fontWeight: FontWeight.w600, color: const Color(0xFFFF4444))),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.04),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Center(
-                    child: Text('Find a Ride?', style: GoogleFonts.lexend(fontSize: screenWidth * 0.065, fontWeight: FontWeight.w600, color: Colors.white)),
-                  ),
-                  SizedBox(height: screenHeight * 0.025),
-                  Text('Where are you going?', style: GoogleFonts.lexend(fontSize: screenWidth * 0.04, color: Colors.white)),
-                  SizedBox(height: screenHeight * 0.008),
-                  Text('From', style: GoogleFonts.lexend(fontSize: screenWidth * 0.035, color: Colors.white)),
-                  SizedBox(height: screenHeight * 0.008),
-                  _buildAutocompleteField(
-                    hint: 'Enter City Name',
-                    controller: fromController,
-                    screenWidth: screenWidth,
-                    screenHeight: screenHeight,
-                    onChanged: _onFromChanged,
-                    suggestions: fromSuggestions,
-                    showSuggestions: showFromSuggestions,
-                    onSuggestionTap: (p) => fetchPlaceDetailsAndSet(p.placeId, isFrom: true),
-                    isLoading: _isLoadingFrom,
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Text('To', style: GoogleFonts.lexend(fontSize: screenWidth * 0.035, color: Colors.white)),
-                  SizedBox(height: screenHeight * 0.008),
-                  _buildAutocompleteField(
-                    hint: 'Enter City Name',
-                    controller: toController,
-                    screenWidth: screenWidth,
-                    screenHeight: screenHeight,
-                    onChanged: _onToChanged,
-                    suggestions: toSuggestions,
-                    showSuggestions: showToSuggestions,
-                    onSuggestionTap: (p) => fetchPlaceDetailsAndSet(p.placeId, isFrom: false),
-                    isLoading: _isLoadingTo,
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Text('Date', style: GoogleFonts.lexend(fontSize: screenWidth * 0.035, color: Colors.white)),
-                  SizedBox(height: screenHeight * 0.008),
-                  TextField(
-                    controller: dateController,
-                    readOnly: true,
-                    onTap: selectDate,
-                    decoration: InputDecoration(
-                      hintText: 'Enter Date',
-                      hintStyle: GoogleFonts.lexend(color: Colors.grey[400], fontSize: screenWidth * 0.038),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.018),
-                      suffixIcon: const Icon(Icons.calendar_today),
-                    ),
-                    style: GoogleFonts.lexend(fontSize: screenWidth * 0.04),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Text('No. of Passengers', style: GoogleFonts.lexend(fontSize: screenWidth * 0.035, color: Colors.white)),
-                  SizedBox(height: screenHeight * 0.012),
-                  Row(children: [
-                    GestureDetector(
-                      onTap: decrementPassengers,
-                      child: Container(width: screenWidth * 0.1, height: screenWidth * 0.1, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.remove, color: Color(0xFFFF4444))),
-                    ),
-                    SizedBox(width: screenWidth * 0.04),
-                    Text('$passengers', style: GoogleFonts.lexend(fontSize: screenWidth * 0.05, fontWeight: FontWeight.w600, color: Colors.white)),
-                    SizedBox(width: screenWidth * 0.04),
-                    GestureDetector(
-                      onTap: incrementPassengers,
-                      child: Container(width: screenWidth * 0.1, height: screenWidth * 0.1, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.add, color: Color(0xFFFF4444))),
-                    ),
+
+              // ================= RECENTS =================
+              if (recentRides.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.all(screenWidth * 0.06),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Recents', style: GoogleFonts.lexend(fontSize: screenWidth * 0.05, fontWeight: FontWeight.w600, color: Colors.black87)),
+                    SizedBox(height: screenHeight * 0.015),
+                    ...recentRides.map((ride) => RecentRideItem(ride: ride, screenWidth: screenWidth, screenHeight: screenHeight)),
                   ]),
-                  SizedBox(height: screenHeight * 0.025),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: handleSearch,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white, padding: EdgeInsets.symmetric(vertical: screenHeight * 0.018), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      child: Text('Search', style: GoogleFonts.lexend(fontSize: screenWidth * 0.045, fontWeight: FontWeight.w600, color: const Color(0xFFFF4444))),
-                    ),
-                  ),
-                ]),
-              ),
-            ),
-
-            // Recents
-            if (recentRides.isNotEmpty)
-              Padding(
-                padding: EdgeInsets.all(screenWidth * 0.06),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Recents', style: GoogleFonts.lexend(fontSize: screenWidth * 0.05, fontWeight: FontWeight.w600, color: Colors.black87)),
-                  SizedBox(height: screenHeight * 0.015),
-                  ...recentRides.map((ride) => RecentRideItem(ride: ride, screenWidth: screenWidth, screenHeight: screenHeight)),
-                ]),
-              ),
-          ]),
-=======
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ========================= HEADER ===========================
-                  Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFF3B30),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(25),
-                        bottomRight: Radius.circular(25),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.06,
-                        vertical: screenHeight * 0.04,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Text('Find a Ride?',
-                                style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.065,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                )),
-                          ),
-
-                          SizedBox(height: screenHeight * 0.025),
-
-                          Text('Where are you going?',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.04,
-                                color: Colors.white,
-                              )),
-
-                          SizedBox(height: screenHeight * 0.012),
-
-                          // ========================= FROM FIELD ===========================
-                          Text('From',
-                              style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.035,
-                                  color: Colors.white)),
-                          SizedBox(height: 8),
-
-                          TextField(
-                            controller: fromController,
-                            onTap: () {
-                              setState(() {
-                                filteredFromCities = cities;
-                                showFromDropdown = true;
-                              });
-                            },
-                            onChanged: (value) {
-                              setState(() {
-                                filteredFromCities = cities
-                                    .where((c) => c.toLowerCase().startsWith(value.toLowerCase()))
-                                    .toList();
-                                showFromDropdown = true;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              hintText: 'Enter City Name',
-                              hintStyle: GoogleFonts.lexend(
-                                  color: Colors.grey[400],
-                                  fontSize: screenWidth * 0.038),
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.04,
-                                vertical: screenHeight * 0.018,
-                              ),
-                            ),
-                          ),
-
-                          if (showFromDropdown)
-                            buildDropdown(filteredFromCities, (selected) {
-                              setState(() {
-                                fromController.text = selected;
-                                showFromDropdown = false;
-                              });
-                            }),
-
-                          SizedBox(height: screenHeight * 0.02),
-
-                          // ========================= TO FIELD ===========================
-                          Text('To',
-                              style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.035,
-                                  color: Colors.white)),
-                          SizedBox(height: 8),
-
-                          TextField(
-                            controller: toController,
-                            onTap: () {
-                              setState(() {
-                                filteredToCities = cities;
-                                showToDropdown = true;
-                              });
-                            },
-                            onChanged: (value) {
-                              setState(() {
-                                filteredToCities = cities
-                                    .where((c) => c.toLowerCase().startsWith(value.toLowerCase()))
-                                    .toList();
-                                showToDropdown = true;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              hintText: 'Enter City Name',
-                              hintStyle: GoogleFonts.lexend(
-                                  color: Colors.grey[400],
-                                  fontSize: screenWidth * 0.038),
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.04,
-                                vertical: screenHeight * 0.018,
-                              ),
-                            ),
-                          ),
-
-                          if (showToDropdown)
-                            buildDropdown(filteredToCities, (selected) {
-                              setState(() {
-                                toController.text = selected;
-                                showToDropdown = false;
-                              });
-                            }),
-
-                          SizedBox(height: screenHeight * 0.02),
-
-                          // ========================= DATE ===========================
-                          Text('Date',
-                              style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.035,
-                                  color: Colors.white)),
-                          SizedBox(height: 8),
-
-                          TextField(
-                            controller: dateController,
-                            readOnly: true,
-                            onTap: selectDate,
-                            decoration: InputDecoration(
-                              hintText: 'Enter Date',
-                              hintStyle: GoogleFonts.lexend(
-                                color: Colors.grey[400],
-                                fontSize: screenWidth * 0.038,
-                              ),
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.04,
-                                vertical: screenHeight * 0.018,
-                              ),
-                              suffixIcon: const Icon(Icons.calendar_today),
-                            ),
-                          ),
-
-                          SizedBox(height: screenHeight * 0.02),
-
-                          // ========================= PASSENGERS ===========================
-                          Text(
-                            'No. of Passengers',
-                            style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.035,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(height: screenHeight * 0.012),
-
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: decrementPassengers,
-                                child: Container(
-                                  width: screenWidth * 0.1,
-                                  height: screenWidth * 0.1,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.remove,
-                                      color: Color(0xFFFF4444)),
-                                ),
-                              ),
-                              SizedBox(width: screenWidth * 0.04),
-                              Text('$passengers',
-                                  style: GoogleFonts.lexend(
-                                      fontSize: screenWidth * 0.05,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white)),
-                              SizedBox(width: screenWidth * 0.04),
-                              GestureDetector(
-                                onTap: incrementPassengers,
-                                child: Container(
-                                  width: screenWidth * 0.1,
-                                  height: screenWidth * 0.1,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.add,
-                                      color: Color(0xFFFF4444)),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: screenHeight * 0.025),
-
-                          // ========================= SEARCH BUTTON ===========================
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: handleSearch,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(
-                                    vertical: screenHeight * 0.018),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: Text(
-                                'Search',
-                                style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.045,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFFFF4444),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // ========================= RECENTS ===========================
-                  if (recentRides.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.all(screenWidth * 0.06),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Recents',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.05,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              )),
-                          SizedBox(height: screenHeight * 0.015),
-                          ...recentRides.map(
-                            (ride) => RecentRideItem(
-                              ride: ride,
-                              screenWidth: screenWidth,
-                              screenHeight: screenHeight,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
->>>>>>> 23c31bbd1c0c81e875c48de1645fd908d8d13ee1
+                ),
+            ],
+          ),
         ),
       ),
 
@@ -928,7 +658,6 @@ class RecentRideItem extends StatelessWidget {
     return Container(
       margin: EdgeInsets.only(bottom: screenHeight * 0.012),
       padding: EdgeInsets.all(screenWidth * 0.04),
-<<<<<<< HEAD
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
       child: Row(children: [
         Icon(Icons.history, color: Colors.grey[600], size: screenWidth * 0.06),
@@ -945,49 +674,6 @@ class RecentRideItem extends StatelessWidget {
           Text(ride.to, style: GoogleFonts.lexend(fontSize: screenWidth * 0.038, fontWeight: FontWeight.w500, color: Colors.black87)),
         ]),
       ]),
-=======
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.history, color: Colors.grey[600], size: screenWidth * 0.06),
-          SizedBox(width: screenWidth * 0.03),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('From',
-                  style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.03, color: Colors.grey[600])),
-              Text(ride.from,
-                  style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.038,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87)),
-            ],
-          ),
-          SizedBox(width: screenWidth * 0.04),
-          Icon(Icons.arrow_forward,
-              color: Colors.grey[400], size: screenWidth * 0.05),
-          SizedBox(width: screenWidth * 0.04),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('To',
-                  style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.03, color: Colors.grey[600])),
-              Text(ride.to,
-                  style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.038,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87)),
-            ],
-          ),
-        ],
-      ),
->>>>>>> 23c31bbd1c0c81e875c48de1645fd908d8d13ee1
     );
   }
 }
