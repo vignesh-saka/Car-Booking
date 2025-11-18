@@ -1,16 +1,13 @@
-// ============================================
-// File: lib/screens/history_screen.dart
-// ============================================
 import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
+import 'package:bookmycar/Screens/History_Screens/Widgets/history_ride_card.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
 import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/ride.dart';
-import '../models/ride_request.dart';
-import '../widgets/ride_card.dart';
 import 'ride_details_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -23,206 +20,114 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int selectedIndex = 3; // History tab selected
+  int selectedIndex = 3;
 
-  // Sample data – replace with backend API call
-  final List<Ride> liveRides = [
-    Ride(
-      id: '1',
-      date: 'Mon 12 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [
-        RideRequest(
-          name: 'Vignesh Kumar Saka',
-          phone: '+91 6309762855',
-          status: 'pending',
-          age: '20',
-        ),
-      ],
-    ),
-    Ride(
-      id: '2',
-      date: 'Mon 12 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [],
-    ),
-  ];
-
-  final List<Ride> completedRides = [
-    Ride(
-      id: '3',
-      date: 'Mon 10 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [],
-      isLive: false,
-    ),
-    // ... more items
-    Ride(
-      id: '4',
-      date: 'Mon 9 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [],
-      isLive: false,
-    ),
-    Ride(
-      id: '5',
-      date: 'Mon 8 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [],
-      isLive: false,
-    ),
-    Ride(
-      id: '6',
-      date: 'Mon 7 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [],
-      isLive: false,
-    ),
-    Ride(
-      id: '4',
-      date: 'Mon 9 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [],
-      isLive: false,
-    ),
-    Ride(
-      id: '5',
-      date: 'Mon 8 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [],
-      isLive: false,
-    ),
-    Ride(
-      id: '6',
-      date: 'Mon 7 November 2025',
-      startTime: '05:00 PM',
-      endTime: '07:00 PM',
-      from: 'Hyderabad',
-      to: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 6309762855',
-      price: '600',
-      totalPassengers: 3,
-      requests: [],
-      isLive: false,
-    ),
-  ];
+  List<Ride> liveRides = [];
+  List<Ride> completedRides = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {}); // Rebuild when tab changes
+    fetchRides();
+  }
+
+  Future<void> fetchRides() async {
+    FirebaseFirestore.instance
+        .collection("rides")
+        .orderBy("createdAt", descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      List<Ride> tempLive = [];
+      List<Ride> tempCompleted = [];
+
+      DateTime now = DateTime.now();
+
+      for (var doc in snapshot.docs) {
+        Ride ride = Ride.fromFirestore(doc.data(), doc.id);
+
+        try {
+          // Convert to datetime
+          List<String> dateParts = ride.date.split("/");
+          DateTime rideDate = DateTime(
+            int.parse(dateParts[2]),
+            int.parse(dateParts[1]),
+            int.parse(dateParts[0]),
+          );
+
+          TimeOfDay endTime = _parseTimeOfDay(ride.endTime);
+          DateTime rideEndDateTime = DateTime(
+            rideDate.year,
+            rideDate.month,
+            rideDate.day,
+            endTime.hour,
+            endTime.minute,
+          );
+
+          // A ride is completed ONLY IF drop time is passed
+if (rideEndDateTime.isAfter(now)) {
+  // Future rides → LIVE
+  tempLive.add(ride);
+} else {
+  // Drop time already passed → COMPLETED
+  tempCompleted.add(ride);
+}
+
+        } catch (e) {
+          tempLive.add(ride); // fallback
+        }
+      }
+
+      setState(() {
+        liveRides = tempLive;
+        completedRides = tempCompleted;
+      });
     });
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  TimeOfDay _parseTimeOfDay(String time) {
+  try {
+    final lower = time.toUpperCase().trim();
+
+    // Example: “05:00 PM” → ["05:00", "PM"]
+    final parts = lower.split(" ");
+    final hm = parts[0].split(":");
+
+    int hour = int.parse(hm[0]);
+    int minute = int.parse(hm[1]);
+    bool isPM = parts[1] == "PM";
+
+    if (isPM && hour != 12) hour += 12;     // 5 PM → 17
+    if (!isPM && hour == 12) hour = 0;      // 12 AM → 00
+
+    return TimeOfDay(hour: hour, minute: minute);
+  } catch (e) {
+    print("Time parsing failed for: $time");
+    return const TimeOfDay(hour: 23, minute: 59); 
+    // fallback to ensure ride stays LIVE, not completed
   }
+}
+
 
   void onNavItemTapped(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-    // TODO: Navigate to respective screens
+    setState(() => selectedIndex = index);
     switch (index) {
-    case 0:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => PublishRideScreen()),
-      );
-      break;
-
-    case 1:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => MyBookingsScreen()),
-      );
-      break;
-
-    case 2:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SearchScreen()),
-      );
-      break;
-
-    case 3:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HistoryScreen()),
-      );
-      break;
-
-    case 4:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ProfileScreen()),
-      );
-      break;
-
-    default:
-      break;
-  }
+      case 0:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => PublishRideScreen()));
+        break;
+      case 1:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => MyBookingsScreen()));
+        break;
+      case 2:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => SearchScreen()));
+        break;
+      case 3:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen()));
+        break;
+      case 4:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+        break;
+    }
   }
 
   @override
@@ -230,16 +135,13 @@ class _HistoryScreenState extends State<HistoryScreen>
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Decide which list to show based on selected tab:
-    final List<Ride> currentRides = _tabController.index == 0
-        ? liveRides
-        : completedRides;
+    final List<Ride> currentRides =
+        _tabController.index == 0 ? liveRides : completedRides;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          // scroll whole container when content is large
           child: Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -255,21 +157,18 @@ class _HistoryScreenState extends State<HistoryScreen>
                 vertical: screenHeight * 0.02,
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Center(
-                    child: Text(
-                      'History',
-                      style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.06,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: Text('History',
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.06,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        )),
                   ),
                   SizedBox(height: screenHeight * 0.02),
 
-                  // Tab Bar
+                  // TAB BAR (same as your UI)
                   Container(
                     margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
                     decoration: BoxDecoration(
@@ -288,27 +187,22 @@ class _HistoryScreenState extends State<HistoryScreen>
                         fontWeight: FontWeight.w600,
                         fontSize: screenWidth * 0.04,
                       ),
-                      unselectedLabelStyle: GoogleFonts.lexend(
-                        fontWeight: FontWeight.w400,
-                        fontSize: screenWidth * 0.04,
-                      ),
                       tabs: const [
                         Tab(text: 'Live'),
                         Tab(text: 'Completed'),
                       ],
-                      onTap: (idx) {
-                        setState(() {});
-                      },
+                      onTap: (_) => setState(() {}),
                     ),
                   ),
+
                   SizedBox(height: screenHeight * 0.02),
 
-                  // List items inside Column so container expands
                   Column(
                     children: currentRides.map((ride) {
                       return Padding(
-                        padding: EdgeInsets.only(bottom: screenHeight * 0.015),
-                        child: RideCard(
+                        padding:
+                            EdgeInsets.only(bottom: screenHeight * 0.015),
+                        child: HistoryRideCard(
                           ride: ride,
                           screenWidth: screenWidth,
                           screenHeight: screenHeight,
@@ -317,8 +211,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    RideDetailsScreen(ride: ride),
+                                builder: (_) => RideDetailsScreen(ride: ride),
                               ),
                             );
                           },
@@ -326,9 +219,6 @@ class _HistoryScreenState extends State<HistoryScreen>
                       );
                     }).toList(),
                   ),
-
-                  // optionally some bottom padding
-                  // SizedBox(height: screenHeight * 0.02),
                 ],
               ),
             ),

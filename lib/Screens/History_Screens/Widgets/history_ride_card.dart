@@ -1,18 +1,18 @@
 // ============================================
-// File: lib/widgets/ride_card.dart
+// File: lib/pages/History_Screens/Widgets/historyride_card.dart
 // ============================================
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/ride.dart';
 
-class RideCard extends StatelessWidget {
+class HistoryRideCard extends StatelessWidget {
   final Ride ride;
   final double screenWidth;
   final double screenHeight;
   final VoidCallback onTap;
   final bool isLive;
 
-  const RideCard({
+  const HistoryRideCard({
     super.key,
     required this.ride,
     required this.screenWidth,

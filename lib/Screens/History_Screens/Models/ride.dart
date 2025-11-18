@@ -26,45 +26,25 @@ class Ride {
     required this.price,
     required this.totalPassengers,
     required this.requests,
-    this.isLive = true,
+    required this.isLive,
   });
 
   bool get hasPendingRequests => requests.any((r) => r.status == 'pending');
 
-  // For backend integration
-  factory Ride.fromJson(Map<String, dynamic> json) {
+  factory Ride.fromFirestore(Map<String, dynamic> data, String docId) {
     return Ride(
-      id: json['id'],
-      date: json['date'],
-      startTime: json['startTime'],
-      endTime: json['endTime'],
-      from: json['from'],
-      to: json['to'],
-      driverName: json['driverName'],
-      driverPhone: json['driverPhone'],
-      price: json['price'],
-      totalPassengers: json['totalPassengers'],
-      requests: (json['requests'] as List)
-          .map((req) => RideRequest.fromJson(req))
-          .toList(),
-      isLive: json['isLive'] ?? true,
+      id: docId,
+      date: data['date'] ?? '',
+      startTime: data['pickupTime'] ?? '',
+      endTime: data['dropTime'] ?? '',
+      from: data['fromCity'] ?? '',
+      to: data['toCity'] ?? '',
+      driverName: data['riderName'] ?? '',
+      driverPhone: data['phoneNumber'] ?? '',
+      price: data['price'] ?? '',
+      totalPassengers: data['passengers'] ?? 1,
+      requests: [], // Requests feature not in Firestore yet
+      isLive: true, // Will be overridden in history_screen.dart
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'date': date,
-      'startTime': startTime,
-      'endTime': endTime,
-      'from': from,
-      'to': to,
-      'driverName': driverName,
-      'driverPhone': driverPhone,
-      'price': price,
-      'totalPassengers': totalPassengers,
-      'requests': requests.map((req) => req.toJson()).toList(),
-      'isLive': isLive,
-    };
   }
 }

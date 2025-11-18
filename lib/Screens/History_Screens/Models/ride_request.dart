@@ -1,7 +1,7 @@
 class RideRequest {
   final String name;
   final String phone;
-  final String status; // 'pending', 'accepted', 'rejected'
+  final String status;
   final String? age;
 
   RideRequest({
@@ -11,7 +11,6 @@ class RideRequest {
     this.age,
   });
 
-  // For backend integration
   factory RideRequest.fromJson(Map<String, dynamic> json) {
     return RideRequest(
       name: json['name'],
