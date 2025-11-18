@@ -1,6 +1,7 @@
 import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:bookmycar/auth/forgotPassword_screen.dart';
 import 'package:bookmycar/auth/signup_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -15,7 +16,52 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _obscurePassword = true; // 👁️ Toggle visibility
+
+  bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  // --------------------------------------------------
+  // 🔥 Firebase Login Function
+  // --------------------------------------------------
+  Future<void> loginUser() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Login Successful!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Navigate to Home / Search Screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SearchScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? "Invalid Credentials"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 🔴 Red Container with Rounded Bottom
+            // 🔴 Red Container
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -46,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       SizedBox(height: height * 0.08),
 
-                      // 🏷️ "Book Car at your Fingertips"
+                      // Title
                       Center(
                         child: RichText(
                           textAlign: TextAlign.center,
@@ -81,7 +127,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       SizedBox(height: height * 0.05),
 
-                      // 🔐 Login Title
                       Text(
                         "Login",
                         style: GoogleFonts.lexend(
@@ -93,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       SizedBox(height: height * 0.03),
 
-                      // 📧 Email Label
+                      // EMAIL LABEL
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -107,12 +152,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       SizedBox(height: height * 0.008),
 
-                      // 📩 Email TextField
+                      // EMAIL FIELD
                       TextFormField(
                         controller: _emailController,
-                        style: GoogleFonts.lexend(
-                          fontSize: height * 0.018,
-                        ),
+                        style: GoogleFonts.lexend(fontSize: height * 0.018),
                         decoration: InputDecoration(
                           hintText: "Enter Email Address",
                           hintStyle: GoogleFonts.lexend(
@@ -147,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       SizedBox(height: height * 0.02),
 
-                      // 🔒 Password Label
+                      // PASSWORD LABEL
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -161,13 +204,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       SizedBox(height: height * 0.008),
 
-                      // 🔑 Password TextField with Visibility Icon
+                      // PASSWORD FIELD
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        style: GoogleFonts.lexend(
-                          fontSize: height * 0.018,
-                        ),
+                        style: GoogleFonts.lexend(fontSize: height * 0.018),
                         decoration: InputDecoration(
                           hintText: "Enter Password",
                           hintStyle: GoogleFonts.lexend(
@@ -214,17 +255,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       SizedBox(height: height * 0.008),
 
-                      // 🔗 Forgot Password
+                      // FORGOT PASSWORD
                       Align(
                         alignment: Alignment.centerRight,
-                        child: GestureDetector( onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const ForgotPasswordScreen(),
-        ),
-      );
-    },
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
                           child: Text(
                             "Forgot password?",
                             style: GoogleFonts.lexend(
@@ -238,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       SizedBox(height: height * 0.025),
 
-                      // 🚪 Login Button
+                      // LOGIN BUTTON
                       SizedBox(
                         width: double.infinity,
                         height: height * 0.055,
@@ -249,36 +292,31 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => const SearchScreen()),
-                            );
-                            // Replace as needed 
-                            if (_formKey.currentState!.validate()) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Login Successful!"),
-                                  backgroundColor: Colors.green,
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  if (_formKey.currentState!.validate()) {
+                                    loginUser(); // FIREBASE LOGIN
+                                  }
+                                },
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Color(0xFFFF3B30),
+                                )
+                              : Text(
+                                  "Login",
+                                  style: GoogleFonts.lexend(
+                                    color: const Color(0xFFFF3B30),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: height * 0.022,
+                                  ),
                                 ),
-                              );
-                            }
-                          },
-                          child: Text(
-                            
-                            "Login",
-                            style: GoogleFonts.lexend(
-                              color: const Color(0xFFFF3B30),
-                              fontWeight: FontWeight.bold,
-                              fontSize: height * 0.022,
-                            ),
-                          ),
                         ),
                       ),
 
                       SizedBox(height: height * 0.02),
 
-                      // 📝 Sign Up
+                      // SIGNUP LINK
                       Center(
                         child: GestureDetector(
                           onTap: () => Navigator.push(
@@ -296,7 +334,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               children: [
                                 TextSpan(
-                                  
                                   text: "SignUp",
                                   style: GoogleFonts.lexend(
                                     fontWeight: FontWeight.bold,
@@ -309,7 +346,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      SizedBox(height: height * 0.06), // ⬅ Extra red space below content
+                      SizedBox(height: height * 0.06),
                     ],
                   ),
                 ),
@@ -318,7 +355,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
             SizedBox(height: height * 0.03),
 
-            // ⚫ Footer
             Text(
               "2025 @ Book My Car",
               style: GoogleFonts.lexend(

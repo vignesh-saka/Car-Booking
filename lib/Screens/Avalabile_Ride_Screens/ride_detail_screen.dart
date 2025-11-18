@@ -317,6 +317,27 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
 
                         SizedBox(height: screenHeight * 0.03),
 
+                        
+Text(
+  "Description",
+  style: GoogleFonts.lexend(
+    fontSize: screenWidth * 0.04,
+    fontWeight: FontWeight.w500,
+    color: Colors.black87,
+  ),
+),
+
+SizedBox(height: screenHeight * 0.01),
+
+Text(
+  widget.ride.description,
+  style: GoogleFonts.lexend(
+    fontSize: screenWidth * 0.038,
+    color: Colors.grey[600],
+  ),
+),
+
+
                         // Book Now button
                         SizedBox(
                           width: double.infinity,
