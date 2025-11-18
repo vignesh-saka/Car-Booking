@@ -5,6 +5,7 @@ import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
 import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -29,125 +30,72 @@ class AvailableRidesScreen extends StatefulWidget {
 class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
   int selectedIndex = 2;
 
-  // Mock data - Replace with actual API call
-  List<RideData> availableRides = [
-    RideData(
-      departureTime: '05:00 PM',
-      arrivalTime: '07:00 PM',
-      fromCity: 'Hyderabad',
-      toCity: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 9392782895',
-      totalSeats: 5,
-      bookedSeats: 0,
-      price: 600,
-      date: 'Mon 12 November 2025',
-    ),
-    RideData(
-      departureTime: '05:00 PM',
-      arrivalTime: '07:00 PM',
-      fromCity: 'Hyderabad',
-      toCity: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 9392782895',
-      totalSeats: 5,
-      bookedSeats: 2,
-      price: 600,
-      date: 'Mon 12 November 2025',
-    ),
-    RideData(
-      departureTime: '05:00 PM',
-      arrivalTime: '07:00 PM',
-      fromCity: 'Hyderabad',
-      toCity: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 9392782895',
-      totalSeats: 4,
-      bookedSeats: 0,
-      price: 600,
-      date: 'Mon 12 November 2025',
-    ),
-    RideData(
-      departureTime: '05:00 PM',
-      arrivalTime: '07:00 PM',
-      fromCity: 'Hyderabad',
-      toCity: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 9392782895',
-      totalSeats: 4,
-      bookedSeats: 0,
-      price: 600,
-      date: 'Mon 12 November 2025',
-    ),
-    RideData(
-      departureTime: '05:00 PM',
-      arrivalTime: '07:00 PM',
-      fromCity: 'Hyderabad',
-      toCity: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 9392782895',
-      totalSeats: 4,
-      bookedSeats: 0,
-      price: 600,
-      date: 'Mon 12 November 2025',
-    ),
-    RideData(
-      departureTime: '05:00 PM',
-      arrivalTime: '07:00 PM',
-      fromCity: 'Hyderabad',
-      toCity: 'Karimnagar',
-      driverName: 'Vignesh Kumar Saka',
-      driverPhone: '+91 9392782895',
-      totalSeats: 4,
-      bookedSeats: 0,
-      price: 600,
-      date: 'Mon 12 November 2025',
-    ),
-  ];
+  /// 🔥 Selected date dynamically
+  late String selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedDate = widget.date; // Start with the searched date
+  }
+
+  /// 🔥 Fetch rides for selected date
+  Stream<QuerySnapshot> fetchRides() {
+    return FirebaseFirestore.instance
+        .collection("rides")
+        .where("fromCity", isEqualTo: widget.from)
+        .where("toCity", isEqualTo: widget.to)
+        .where("date", isEqualTo: selectedDate)
+        .snapshots();
+  }
+
+  /// 🔥 Calendar Picker
+  Future<void> pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now().subtract(Duration(days: 0)),
+      lastDate: DateTime(2030),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(primary: Color(0xFFFF3B30)),
+        ),
+        child: child!,
+      ),
+    );
+
+    if (picked != null) {
+      setState(() {
+        selectedDate = "${picked.day}/${picked.month}/${picked.year}";
+      });
+    }
+  }
 
   void onNavItemTapped(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
+    setState(() => selectedIndex = index);
+
     switch (index) {
-    case 0:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => PublishRideScreen()),
-      );
-      break;
-
-    case 1:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => MyBookingsScreen()),
-      );
-      break;
-
-    case 2:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SearchScreen()),
-      );
-      break;
-
-    case 3:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HistoryScreen()),
-      );
-      break;
-
-    case 4:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ProfileScreen()),
-      );
-      break;
-
-    default:
-      break;
-  }
+      case 0:
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => PublishRideScreen()));
+        break;
+      case 1:
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => MyBookingsScreen()));
+        break;
+      case 2:
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => SearchScreen()));
+        break;
+      case 3:
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HistoryScreen()));
+        break;
+      case 4:
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => ProfileScreen()));
+        break;
+    }
   }
 
   void onRideSelected(RideData ride) {
@@ -181,7 +129,7 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
           ),
           child: Column(
             children: [
-              // Red Header part
+              // ---------------- HEADER ----------------
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: screenWidth * 0.05,
@@ -221,40 +169,79 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                 ),
               ),
 
-              // Subtitle inside the same red container
+              // ---------------- TOP TITLE + CALENDAR ----------------
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: screenWidth * 0.05,
-                  vertical: screenHeight * 0.012,
                 ),
-                child: Text(
-                  'Book a Safe & Enjoy Ride',
-                  style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.04,
-                    color: Colors.grey[200], // maybe lighter so it shows on red
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Book a Safe & Enjoy Ride',
+                      style: GoogleFonts.lexend(
+                        fontSize: screenWidth * 0.04,
+                        color: Colors.grey[200],
+                      ),
+                    ),
+
+                    // 🔥 Calendar Icon
+                    GestureDetector(
+                      onTap: pickDate,
+                      child: Icon(
+                        Icons.calendar_month,
+                        color: Colors.white,
+                        size: screenWidth * 0.07,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 🔥 Dynamic Selected Date Display
+              Padding(
+                padding: EdgeInsets.only(
+                  left: screenWidth * 0.05,
+                  top: screenHeight * 0.005,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    selectedDate,
+                    style: GoogleFonts.lexend(
+                      fontSize: screenWidth * 0.038,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
 
-              SizedBox(width: screenWidth * 0.09),
+              SizedBox(height: screenHeight * 0.01),
 
-              // Rides list area inside red container
+              // ---------------- RIDES LIST ----------------
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: screenWidth * 0.05,
                     vertical: screenHeight * 0.01,
                   ),
-                  child: availableRides.isEmpty
-                      ? Center(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: fetchRides(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        );
+                      }
+
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return Center(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.search_off,
-                                size: screenWidth * 0.2,
-                                color: Colors.grey[400],
-                              ),
+                              Icon(Icons.search_off,
+                                  size: screenWidth * 0.2,
+                                  color: Colors.grey[400]),
                               SizedBox(height: screenHeight * 0.02),
                               Text(
                                 'No rides available',
@@ -265,19 +252,41 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                               ),
                             ],
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: availableRides.length,
-                          itemBuilder: (context, index) {
-                            return RideCard(
-                              ride: availableRides[index],
-                              screenWidth: screenWidth,
-                              screenHeight: screenHeight,
-                              onTap: () =>
-                                  onRideSelected(availableRides[index]),
-                            );
-                          },
-                        ),
+                        );
+                      }
+
+                      final docs = snapshot.data!.docs;
+
+                      return ListView.builder(
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          final data =
+                              docs[index].data() as Map<String, dynamic>;
+
+                          RideData ride = RideData(
+                            departureTime: data["pickupTime"],
+                            arrivalTime: data["dropTime"],
+                            fromCity: data["fromCity"],
+                            toCity: data["toCity"],
+                            driverName: data["riderName"],
+                            driverPhone: data["phoneNumber"],
+                            totalSeats: data["passengers"],
+                            bookedSeats: 0,
+                            price: int.tryParse(data["price"].toString()) ?? 0,
+                            date: data["date"],
+                            description: data["description"] ?? '',
+                          );
+
+                          return RideCard(
+                            ride: ride,
+                            screenWidth: screenWidth,
+                            screenHeight: screenHeight,
+                            onTap: () => onRideSelected(ride),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
@@ -285,7 +294,7 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
         ),
       ),
 
-      // Bottom Navigation
+      // ---------------- BOTTOM NAV ----------------
       bottomNavigationBar: BottomNavigation(
         selectedIndex: selectedIndex,
         onItemTapped: onNavItemTapped,
@@ -295,6 +304,8 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
     );
   }
 }
+
+// ---------------- DATA MODEL (UNCHANGED) ----------------
 
 class RideData {
   final String departureTime;
@@ -307,6 +318,7 @@ class RideData {
   final int bookedSeats;
   final int price;
   final String date;
+  final String description;
 
   RideData({
     required this.departureTime,
@@ -319,11 +331,15 @@ class RideData {
     required this.bookedSeats,
     required this.price,
     required this.date,
+    this.description = '',
+
   });
 
   int get availableSeats => totalSeats - bookedSeats;
 }
 
+// ---------------- RIDE CARD (UNCHANGED) ----------------
+// (Keeping EXACT UI as requested)
 class RideCard extends StatelessWidget {
   final RideData ride;
   final double screenWidth;
@@ -360,38 +376,31 @@ class RideCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Time and Cities Row
             Row(
               children: [
-                // Departure
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        ride.departureTime,
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.04,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
+                      Text(ride.departureTime,
+                          style: GoogleFonts.lexend(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          )),
                       SizedBox(height: screenHeight * 0.004),
                       Row(
                         children: [
-                          Icon(
-                            Icons.location_on,
-                            size: screenWidth * 0.04,
-                            color: Colors.grey[600],
-                          ),
+                          Icon(Icons.location_on,
+                              size: screenWidth * 0.04,
+                              color: Colors.grey[600]),
                           SizedBox(width: screenWidth * 0.01),
                           Flexible(
                             child: Text(
                               ride.fromCity,
                               style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.035,
-                                color: Colors.grey[600],
-                              ),
+                                  fontSize: screenWidth * 0.035,
+                                  color: Colors.grey[600]),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -401,29 +410,23 @@ class RideCard extends StatelessWidget {
                   ),
                 ),
 
-                // Arrow
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-                  child: Icon(
-                    Icons.arrow_forward,
-                    color: Colors.grey[400],
-                    size: screenWidth * 0.05,
-                  ),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+                  child: Icon(Icons.arrow_forward,
+                      color: Colors.grey[400], size: screenWidth * 0.05),
                 ),
 
-                // Arrival and Price
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        ride.arrivalTime,
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.04,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
+                      Text(ride.arrivalTime,
+                          style: GoogleFonts.lexend(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          )),
                       SizedBox(height: screenHeight * 0.004),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -432,18 +435,15 @@ class RideCard extends StatelessWidget {
                             child: Text(
                               ride.toCity,
                               style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.035,
-                                color: Colors.grey[600],
-                              ),
+                                  fontSize: screenWidth * 0.035,
+                                  color: Colors.grey[600]),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           SizedBox(width: screenWidth * 0.01),
-                          Icon(
-                            Icons.location_on,
-                            size: screenWidth * 0.04,
-                            color: Colors.grey[600],
-                          ),
+                          Icon(Icons.location_on,
+                              size: screenWidth * 0.04,
+                              color: Colors.grey[600]),
                         ],
                       ),
                     ],
@@ -454,49 +454,38 @@ class RideCard extends StatelessWidget {
 
             Divider(height: screenHeight * 0.025, color: Colors.grey[300]),
 
-            // Driver Info
             Row(
               children: [
                 CircleAvatar(
                   radius: screenWidth * 0.05,
                   backgroundColor: Colors.grey[300],
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.grey[600],
-                    size: screenWidth * 0.05,
-                  ),
+                  child: Icon(Icons.person,
+                      color: Colors.grey[600], size: screenWidth * 0.05),
                 ),
                 SizedBox(width: screenWidth * 0.03),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        ride.driverName,
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.038,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        ride.driverPhone,
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.032,
-                          color: Colors.grey[600],
-                        ),
-                      ),
+                      Text(ride.driverName,
+                          style: GoogleFonts.lexend(
+                              fontSize: screenWidth * 0.038,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87),
+                          overflow: TextOverflow.ellipsis),
+                      Text(ride.driverPhone,
+                          style: GoogleFonts.lexend(
+                              fontSize: screenWidth * 0.032,
+                              color: Colors.grey[600])),
                     ],
                   ),
                 ),
                 Text(
                   'Rs. ${ride.price}',
                   style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.042,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFFFF3B30),
-                  ),
+                      fontSize: screenWidth * 0.042,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFFF3B30)),
                 ),
               ],
             ),

@@ -1,4 +1,6 @@
 import 'package:bookmycar/auth/login_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -14,7 +16,65 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _obscurePassword = true; // 👁️ password visibility toggle
+
+  bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  // -------------------------
+  // 🔥 Firebase SignUp Method
+  // -------------------------
+  Future<void> registerUser() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // 1️⃣ Create user in Firebase Auth
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      String uid = userCredential.user!.uid;
+
+      // 2️⃣ Save user details in Firestore
+      await FirebaseFirestore.instance.collection("users").doc(uid).set({
+        "uid": uid,
+        "name": _nameController.text.trim(),
+        "email": _emailController.text.trim(),
+        "createdAt": DateTime.now(),
+      });
+
+      // 3️⃣ Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Account Created Successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // 4️⃣ Navigate to Login Page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? "Something went wrong"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +86,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 🔴 Red Container (Main Content Area)
+            // 🔴 Red Container
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -45,7 +105,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     children: [
                       SizedBox(height: height * 0.08),
 
-                      // 🏷️ Title: "Book Car at your Fingertips"
+                      // TITLE
                       Center(
                         child: RichText(
                           textAlign: TextAlign.center,
@@ -80,7 +140,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       SizedBox(height: height * 0.05),
 
-                      // 🧾 Sign Up Title
                       Text(
                         "Sign Up",
                         style: GoogleFonts.lexend(
@@ -92,7 +151,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       SizedBox(height: height * 0.03),
 
-                      // 👤 Name Field Label
+                      // NAME FIELD
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -106,29 +165,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       SizedBox(height: height * 0.008),
 
-                      // 👤 Name TextField
                       TextFormField(
                         controller: _nameController,
-                        style: GoogleFonts.lexend(
-                          fontSize: height * 0.018,
-                        ),
+                        style: GoogleFonts.lexend(fontSize: height * 0.018),
                         decoration: InputDecoration(
                           hintText: "Enter Your Name",
-                          
                           hintStyle: GoogleFonts.lexend(
-                            
                             color: Colors.grey.shade600,
                             fontSize: height * 0.018,
                           ),
                           filled: true,
-                          
                           fillColor: Colors.white,
                           contentPadding: EdgeInsets.symmetric(
                             vertical: height * 0.016,
                             horizontal: width * 0.04,
                           ),
                           border: OutlineInputBorder(
-                            
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
                           ),
@@ -137,17 +189,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             fontSize: height * 0.016,
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Please enter your name";
-                          }
-                          return null;
-                        },
+                        validator: (value) =>
+                            value!.trim().isEmpty ? "Please enter your name" : null,
                       ),
 
                       SizedBox(height: height * 0.02),
 
-                      // 📧 Email Label
+                      // EMAIL FIELD
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -161,12 +209,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       SizedBox(height: height * 0.008),
 
-                      // 📩 Email TextField
                       TextFormField(
                         controller: _emailController,
-                        style: GoogleFonts.lexend(
-                          fontSize: height * 0.018,
-                        ),
+                        style: GoogleFonts.lexend(fontSize: height * 0.018),
                         decoration: InputDecoration(
                           hintText: "Enter Email Address",
                           hintStyle: GoogleFonts.lexend(
@@ -201,7 +246,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       SizedBox(height: height * 0.02),
 
-                      // 🔒 Password Label
+                      // PASSWORD FIELD
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -215,13 +260,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       SizedBox(height: height * 0.008),
 
-                      // 🔑 Password Field with Toggle Icon
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        style: GoogleFonts.lexend(
-                          fontSize: height * 0.018,
-                        ),
+                        style: GoogleFonts.lexend(fontSize: height * 0.018),
                         decoration: InputDecoration(
                           hintText: "Enter Password",
                           hintStyle: GoogleFonts.lexend(
@@ -268,7 +310,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       SizedBox(height: height * 0.04),
 
-                      // 🧾 Sign Up Button
+                      // SIGN UP BUTTON
                       SizedBox(
                         width: double.infinity,
                         height: height * 0.055,
@@ -279,61 +321,65 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Sign Up Successful!"),
-                                  backgroundColor: Colors.green,
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  if (_formKey.currentState!.validate()) {
+                                    registerUser();
+                                  }
+                                },
+                          child: _isLoading
+                              ? Text(
+                                  "Loading...",
+                                  style: GoogleFonts.lexend(
+                                    color: const Color.fromARGB(255, 255, 255, 255),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: height * 0.020,
+                                  ),
+                                )
+                              : Text(
+                                  "Sign Up",
+                                  style: GoogleFonts.lexend(
+                                    color: const Color(0xFFFF3B30),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: height * 0.022,
+                                  ),
                                 ),
-                              );
-                            }
-                          },
-                          child: Text(
-                            "Sign Up",
-                            style: GoogleFonts.lexend(
-                              color: const Color(0xFFFF3B30),
-                              fontWeight: FontWeight.bold,
-                              fontSize: height * 0.022,
-                            ),
-                          ),
                         ),
                       ),
 
                       SizedBox(height: height * 0.02),
 
-                      // 🔁 Already have an account? Login
-                      Center(
-                        child: GestureDetector(
-                          onTap:(){ Navigator.push( 
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => const LoginScreen(),
                             ),
                           );
-                          },
-                          child: RichText(
-                            text: TextSpan(
-                              text: "Already have an account? ",
-                              style: GoogleFonts.lexend(
-                                color: Colors.white,
-                                fontSize: height * 0.018,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: "Login",
-                                  style: GoogleFonts.lexend(
-                                    fontWeight: FontWeight.bold,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ],
+                        },
+                        child: RichText(
+                          text: TextSpan(
+                            text: "Already have an account? ",
+                            style: GoogleFonts.lexend(
+                              color: Colors.white,
+                              fontSize: height * 0.018,
                             ),
+                            children: [
+                              TextSpan(
+                                text: "Login",
+                                style: GoogleFonts.lexend(
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
 
-                      SizedBox(height: height * 0.06), // ⬅ Extend red area below
+                      SizedBox(height: height * 0.06),
                     ],
                   ),
                 ),
@@ -342,7 +388,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
             SizedBox(height: height * 0.03),
 
-            // ⚫ Footer
             Text(
               "2025 @ Book My Car",
               style: GoogleFonts.lexend(

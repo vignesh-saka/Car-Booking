@@ -1,4 +1,5 @@
 import 'package:bookmycar/auth/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -12,6 +13,57 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
+  
+  bool _isLoading = false;
+
+  // -------------------------------------------------------
+  // 🔥 FIREBASE - SEND PASSWORD RESET EMAIL
+  // -------------------------------------------------------
+  Future<void> resetPassword() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _emailController.text.trim(),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Password reset link sent to your email!",
+            style: GoogleFonts.lexend(),
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Future.delayed(const Duration(seconds: 2), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      });
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? "Something went wrong"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +192,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                       SizedBox(height: height * 0.04),
 
-                      // 🚀 Submit Button
+                      // 🚀 Submit Button With Firebase
                       SizedBox(
                         width: double.infinity,
                         height: height * 0.055,
@@ -151,39 +203,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              // ✅ Show success snackbar
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    "Password reset link sent successfully!",
-                                    style: GoogleFonts.lexend(),
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  if (_formKey.currentState!.validate()) {
+                                    resetPassword(); // 🔥 Firebase Reset
+                                  }
+                                },
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Color(0xFFFF3B30),
+                                )
+                              : Text(
+                                  "Submit",
+                                  style: GoogleFonts.lexend(
+                                    color: Color(0xFFFF3B30),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: height * 0.022,
                                   ),
-                                  backgroundColor: Colors.green,
-                                  behavior: SnackBarBehavior.floating,
                                 ),
-                              );
-
-                              // ⏳ Wait 2 seconds then navigate back to Login
-                              Future.delayed(const Duration(seconds: 2), () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const LoginScreen(),
-                                  ),
-                                );
-                              });
-                            }
-                          },
-                          child: Text(
-                            "Submit",
-                            style: GoogleFonts.lexend(
-                              color: const Color(0xFFFF3B30),
-                              fontWeight: FontWeight.bold,
-                              fontSize: height * 0.022,
-                            ),
-                          ),
                         ),
                       ),
 
