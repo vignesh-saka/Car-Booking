@@ -32,102 +32,165 @@ class _HistoryScreenState extends State<HistoryScreen>
     fetchRides();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   Future<void> fetchRides() async {
     FirebaseFirestore.instance
         .collection("rides")
         .orderBy("createdAt", descending: true)
         .snapshots()
         .listen((snapshot) {
-      List<Ride> tempLive = [];
-      List<Ride> tempCompleted = [];
+          List<Ride> tempLive = [];
+          List<Ride> tempCompleted = [];
 
-      DateTime now = DateTime.now();
+          DateTime now = DateTime.now();
 
-      for (var doc in snapshot.docs) {
-        Ride ride = Ride.fromFirestore(doc.data(), doc.id);
+          for (var doc in snapshot.docs) {
+            Ride ride = Ride.fromFirestore(doc.data(), doc.id);
 
-        try {
-          // Convert to datetime
-          List<String> dateParts = ride.date.split("/");
-          DateTime rideDate = DateTime(
-            int.parse(dateParts[2]),
-            int.parse(dateParts[1]),
-            int.parse(dateParts[0]),
-          );
+            try {
+              // Convert to datetime (expects dd/MM/yyyy)
+              List<String> dateParts = ride.date.split("/");
+              DateTime rideDate = DateTime(
+                int.parse(dateParts[2]),
+                int.parse(dateParts[1]),
+                int.parse(dateParts[0]),
+              );
 
-          TimeOfDay endTime = _parseTimeOfDay(ride.endTime);
-          DateTime rideEndDateTime = DateTime(
-            rideDate.year,
-            rideDate.month,
-            rideDate.day,
-            endTime.hour,
-            endTime.minute,
-          );
+              TimeOfDay endTime = _parseTimeOfDay(ride.endTime);
+              DateTime rideEndDateTime = DateTime(
+                rideDate.year,
+                rideDate.month,
+                rideDate.day,
+                endTime.hour,
+                endTime.minute,
+              );
 
-          // A ride is completed ONLY IF drop time is passed
-if (rideEndDateTime.isAfter(now)) {
-  // Future rides → LIVE
-  tempLive.add(ride);
-} else {
-  // Drop time already passed → COMPLETED
-  tempCompleted.add(ride);
-}
+              // Future drop time => live, otherwise completed
+              if (rideEndDateTime.isAfter(now)) {
+                tempLive.add(ride);
+              } else {
+                tempCompleted.add(ride);
+              }
+            } catch (e) {
+              // fallback: treat as live
+              tempLive.add(ride);
+            }
+          }
 
-        } catch (e) {
-          tempLive.add(ride); // fallback
-        }
-      }
-
-      setState(() {
-        liveRides = tempLive;
-        completedRides = tempCompleted;
-      });
-    });
+          setState(() {
+            liveRides = tempLive;
+            completedRides = tempCompleted;
+          });
+        });
   }
 
   TimeOfDay _parseTimeOfDay(String time) {
-  try {
-    final lower = time.toUpperCase().trim();
+    try {
+      final upper = time.toUpperCase().trim();
+      final parts = upper.split(" ");
+      final hm = parts[0].split(":");
 
-    // Example: “05:00 PM” → ["05:00", "PM"]
-    final parts = lower.split(" ");
-    final hm = parts[0].split(":");
+      int hour = int.parse(hm[0]);
+      int minute = int.parse(hm[1]);
+      bool isPM = parts.length > 1 && parts[1] == "PM";
 
-    int hour = int.parse(hm[0]);
-    int minute = int.parse(hm[1]);
-    bool isPM = parts[1] == "PM";
+      if (isPM && hour != 12) hour += 12;
+      if (!isPM && hour == 12) hour = 0;
 
-    if (isPM && hour != 12) hour += 12;     // 5 PM → 17
-    if (!isPM && hour == 12) hour = 0;      // 12 AM → 00
-
-    return TimeOfDay(hour: hour, minute: minute);
-  } catch (e) {
-    print("Time parsing failed for: $time");
-    return const TimeOfDay(hour: 23, minute: 59); 
-    // fallback to ensure ride stays LIVE, not completed
+      return TimeOfDay(hour: hour, minute: minute);
+    } catch (e) {
+      print("Time parsing failed for: $time");
+      return const TimeOfDay(hour: 23, minute: 59);
+    }
   }
-}
-
 
   void onNavItemTapped(int index) {
-    setState(() => selectedIndex = index);
+    setState(() {
+      selectedIndex = index;
+    });
     switch (index) {
       case 0:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => PublishRideScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PublishRideScreen()),
+        );
         break;
       case 1:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => MyBookingsScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
+        );
         break;
       case 2:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => SearchScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SearchScreen()),
+        );
         break;
       case 3:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HistoryScreen()),
+        );
         break;
       case 4:
-        Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+        );
         break;
     }
+  }
+
+  Widget _buildRidesList(
+    List<Ride> rides,
+    double screenWidth,
+    double screenHeight,
+  ) {
+    if (rides.isEmpty) {
+      return Center(
+        child: Text(
+          'No rides found',
+          style: GoogleFonts.lexend(
+            fontSize: screenWidth * 0.04,
+            color: Colors.black54,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.04,
+        vertical: screenHeight * 0.01,
+      ),
+      itemCount: rides.length,
+      itemBuilder: (context, index) {
+        final ride = rides[index];
+        return Padding(
+          padding: EdgeInsets.only(bottom: screenHeight * 0.015),
+          child: HistoryRideCard(
+            ride: ride,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            isLive: _tabController.index == 0,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RideDetailsScreen(ride: ride),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -135,93 +198,95 @@ if (rideEndDateTime.isAfter(now)) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final List<Ride> currentRides =
-        _tabController.index == 0 ? liveRides : completedRides;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFF3B30),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(25),
-                bottomRight: Radius.circular(25),
-              ),
+        child: Container(
+          width: double.infinity,
+          // fill screen so red container looks like in MyBookingsScreen
+          height: screenHeight,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFF3B30),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(25),
+              bottomRight: Radius.circular(25),
             ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.04,
-                vertical: screenHeight * 0.02,
+          ),
+          child: Column(
+            children: [
+              SizedBox(height: screenHeight * 0.02),
+
+              // Title (same UI)
+              Text(
+                'History',
+                style: GoogleFonts.lexend(
+                  fontSize: screenWidth * 0.06,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
-              child: Column(
-                children: [
-                  Center(
-                    child: Text('History',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.06,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        )),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
 
-                  // TAB BAR (same as your UI)
-                  Container(
-                    margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicator: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      labelColor: Colors.black,
-                      unselectedLabelColor: Colors.black54,
-                      labelStyle: GoogleFonts.lexend(
-                        fontWeight: FontWeight.w600,
-                        fontSize: screenWidth * 0.04,
-                      ),
-                      tabs: const [
-                        Tab(text: 'Live'),
-                        Tab(text: 'Completed'),
-                      ],
-                      onTap: (_) => setState(() {}),
-                    ),
-                  ),
+              SizedBox(height: screenHeight * 0.02),
 
-                  SizedBox(height: screenHeight * 0.02),
-
-                  Column(
-                    children: currentRides.map((ride) {
-                      return Padding(
-                        padding:
-                            EdgeInsets.only(bottom: screenHeight * 0.015),
-                        child: HistoryRideCard(
-                          ride: ride,
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          isLive: (_tabController.index == 0),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => RideDetailsScreen(ride: ride),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    }).toList(),
+              // Tab Bar (matches MyBookingsScreen style)
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(25),
                   ),
-                ],
+                  dividerColor: Colors.transparent,
+                  labelColor: Colors.black,
+                  unselectedLabelColor: Colors.black54,
+                  labelStyle: GoogleFonts.lexend(
+                    fontWeight: FontWeight.w600,
+                    fontSize: screenWidth * 0.04,
+                  ),
+                  unselectedLabelStyle: GoogleFonts.lexend(
+                    fontWeight: FontWeight.w400,
+                    fontSize: screenWidth * 0.04,
+                  ),
+                  tabs: const [
+                    Tab(text: 'Live'),
+                    Tab(text: 'Completed'),
+                  ],
+                  onTap: (_) => setState(() {}),
+                ),
               ),
-            ),
+
+              SizedBox(height: screenHeight * 0.02),
+
+              // Expanded area — only this scrolls (lists)
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B30),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(25),
+                      bottomRight: Radius.circular(25),
+                    ),
+                  ),
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildRidesList(liveRides, screenWidth, screenHeight),
+                      _buildRidesList(
+                        completedRides,
+                        screenWidth,
+                        screenHeight,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

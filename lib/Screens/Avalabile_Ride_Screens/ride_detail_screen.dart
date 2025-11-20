@@ -80,6 +80,58 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
+  /// Splits an address like "Hyderabad, Telangana" into:
+  /// { 'city': 'Hyderabad', 'rest': 'Telangana' }
+  /// If no comma exists, 'city' contains the full string and 'rest' is empty.
+  Map<String, String> _splitAddress(String s) {
+    final trimmed = s.trim();
+    if (trimmed.isEmpty) return {'city': '', 'rest': ''};
+    final parts = trimmed.split(',');
+    final city = parts[0].trim();
+    final rest = parts.length > 1 ? parts.sublist(1).join(',').trim() : '';
+    return {'city': city, 'rest': rest};
+  }
+
+  Widget _buildAddressWidget(String address, double screenWidth,
+      {bool alignRight = false}) {
+    final parts = _splitAddress(address);
+    final city = parts['city']!;
+    final rest = parts['rest']!;
+
+    return Column(
+      crossAxisAlignment:
+          alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // City (bold)
+        Text(
+          city,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.lexend(
+            fontSize: screenWidth * 0.038,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
+          ),
+        ),
+        // Rest (muted) — only show if non-empty
+        if (rest.isNotEmpty) ...[
+          SizedBox(height: 4),
+          Text(
+            rest,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.lexend(
+              fontSize: screenWidth * 0.032,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -176,38 +228,54 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                         // Time & route rows
                         Row(
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.ride.departureTime,
-                                  style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.045,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                SizedBox(height: screenHeight * 0.004),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: screenWidth * 0.045,
-                                      color: Colors.grey[600],
-                                    ),
-                                    SizedBox(width: screenWidth * 0.01),
-                                    Text(
-                                      widget.ride.fromCity,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.038,
-                                        color: Colors.grey[600],
+                            Expanded(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Time
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.ride.departureTime,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.045,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
                                       ),
+                                      SizedBox(height: screenHeight * 0.004),
+                                    ],
+                                  ),
+
+                                  SizedBox(width: screenWidth * 0.02),
+
+                                  // Icon + address column (Flexible)
+                                  Flexible(
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(
+                                          Icons.location_on,
+                                          size: screenWidth * 0.045,
+                                          color: Colors.grey[600],
+                                        ),
+                                        SizedBox(width: screenWidth * 0.01),
+                                        Flexible(
+                                          child: _buildAddressWidget(
+                                              widget.ride.fromCity, screenWidth,
+                                              alignRight: false),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                ],
+                              ),
                             ),
-                            Spacer(),
+
+                            // Price
                             Text(
                               'Rs. ${widget.ride.price}',
                               style: GoogleFonts.lexend(
@@ -221,36 +289,44 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                         SizedBox(height: screenHeight * 0.015),
                         Row(
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.ride.arrivalTime,
-                                  style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.045,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                SizedBox(height: screenHeight * 0.004),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: screenWidth * 0.045,
-                                      color: Colors.grey[600],
-                                    ),
-                                    SizedBox(width: screenWidth * 0.01),
-                                    Text(
-                                      widget.ride.toCity,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.038,
-                                        color: Colors.grey[600],
+                            Expanded(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Time
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.ride.arrivalTime,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.045,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                      SizedBox(height: screenHeight * 0.004),
+                                    ],
+                                  ),
+
+                                  SizedBox(width: screenWidth * 0.02),
+
+                                  Icon(
+                                    Icons.location_on,
+                                    size: screenWidth * 0.045,
+                                    color: Colors.grey[600],
+                                  ),
+                                  SizedBox(width: screenWidth * 0.01),
+
+                                  // To-address column
+                                  Flexible(
+                                    child: _buildAddressWidget(
+                                        widget.ride.toCity, screenWidth,
+                                        alignRight: false),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -317,26 +393,25 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
 
                         SizedBox(height: screenHeight * 0.03),
 
-                        
-Text(
-  "Description",
-  style: GoogleFonts.lexend(
-    fontSize: screenWidth * 0.04,
-    fontWeight: FontWeight.w500,
-    color: Colors.black87,
-  ),
-),
+                        Text(
+                          "Description",
+                          style: GoogleFonts.lexend(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
 
-SizedBox(height: screenHeight * 0.01),
+                        SizedBox(height: screenHeight * 0.0),
 
-Text(
-  widget.ride.description,
-  style: GoogleFonts.lexend(
-    fontSize: screenWidth * 0.038,
-    color: Colors.grey[600],
-  ),
-),
-
+                        Text(
+                          widget.ride.description,
+                          style: GoogleFonts.lexend(
+                            fontSize: screenWidth * 0.038,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.02),
 
                         // Book Now button
                         SizedBox(

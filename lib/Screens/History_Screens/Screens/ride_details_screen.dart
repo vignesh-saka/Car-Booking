@@ -76,6 +76,56 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
     // TODO: backend API reject-logic
   }
 
+  /// Splits an address like "Hyderabad, Telangana" into:
+  ///   { 'city': 'Hyderabad', 'rest': 'Telangana' }
+  /// If no comma exists, 'city' will contain the full string and 'rest' will be empty.
+  Map<String, String> _splitAddress(String s) {
+    final trimmed = s.trim();
+    if (trimmed.isEmpty) return {'city': '', 'rest': ''};
+    final parts = trimmed.split(',');
+    final city = parts[0].trim();
+    final rest = parts.length > 1 ? parts.sublist(1).join(',').trim() : '';
+    return {'city': city, 'rest': rest};
+  }
+
+  Widget _buildAddressColumn(String address, double screenWidth) {
+    final parts = _splitAddress(address);
+    final city = parts['city']!;
+    final rest = parts['rest']!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // City (bold)
+        Text(
+          city,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.lexend(
+            fontSize: screenWidth * 0.038,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+
+        // Rest (muted, below city). Only render when non-empty.
+        if (rest.isNotEmpty) ...[
+          SizedBox(height: 4),
+          Text(
+            rest,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.lexend(
+              fontSize: screenWidth * 0.032,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -119,7 +169,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
               ),
             ),
 
-            // Content container with red background
+            // Content container with red background (rounded bottom)
             Expanded(
               child: SingleChildScrollView(
                 child: Container(
@@ -145,6 +195,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // date
                             Text(
                               widget.ride.date,
                               style: GoogleFonts.lexend(
@@ -155,76 +206,107 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                             ),
                             SizedBox(height: screenHeight * 0.015),
 
-                            // Start time & from
+                            // Start time & from (left) | price (right)
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
+                                // Left group: time + from-address column (flexible)
+                                Expanded(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Start time
+                                      Text(
+                                        widget.ride.startTime,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.035,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      SizedBox(width: screenWidth * 0.02),
+
+                                      // Location icon + address column (Flexible)
+                                      Flexible(
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(
+                                              Icons.location_on,
+                                              size: screenWidth * 0.04,
+                                              color: Colors.black54,
+                                            ),
+                                            SizedBox(width: screenWidth * 0.01),
+                                            // Address columns (city above, rest below)
+                                            Flexible(
+                                              child: _buildAddressColumn(widget.ride.from, screenWidth),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Right: price
+                                SizedBox(width: screenWidth * 0.02),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      widget.ride.startTime,
+                                      'Rs: ${widget.ride.price}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.lexend(
                                         fontSize: screenWidth * 0.035,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    SizedBox(width: screenWidth * 0.02),
-                                    Icon(
-                                      Icons.location_on,
-                                      size: screenWidth * 0.04,
-                                      color: Colors.black54,
-                                    ),
-                                    SizedBox(width: screenWidth * 0.01),
-                                    Text(
-                                      widget.ride.from,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.038,
                                         fontWeight: FontWeight.w600,
+                                        color: const Color(0xFFFF4444),
                                       ),
                                     ),
                                   ],
-                                ),
-                                Text(
-                                  'Rs: ${widget.ride.price}',
-                                  style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.035,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFFFF4444),
-                                  ),
                                 ),
                               ],
                             ),
+
                             SizedBox(height: screenHeight * 0.008),
 
-                            // End time & to
+                            // End time & to (left) | Edit (right)
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      widget.ride.endTime,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.035,
-                                        fontWeight: FontWeight.w500,
+                                Expanded(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // End time
+                                      Text(
+                                        widget.ride.endTime,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.035,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
-                                    SizedBox(width: screenWidth * 0.02),
-                                    Icon(
-                                      Icons.location_on,
-                                      size: screenWidth * 0.04,
-                                      color: Colors.black54,
-                                    ),
-                                    SizedBox(width: screenWidth * 0.01),
-                                    Text(
-                                      widget.ride.to,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.038,
-                                        fontWeight: FontWeight.w600,
+                                      SizedBox(width: screenWidth * 0.02),
+
+                                      Icon(
+                                        Icons.location_on,
+                                        size: screenWidth * 0.04,
+                                        color: Colors.black54,
                                       ),
-                                    ),
-                                  ],
+                                      SizedBox(width: screenWidth * 0.01),
+
+                                      // To-address column
+                                      Flexible(
+                                        child: _buildAddressColumn(widget.ride.to, screenWidth),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+
+                                // Edit button
                                 GestureDetector(
                                   onTap: () {
                                     // TODO: navigate edit
@@ -236,6 +318,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                                         size: screenWidth * 0.045,
                                         color: Colors.blue,
                                       ),
+                                      SizedBox(width: 6),
                                       Text(
                                         'Edit',
                                         style: GoogleFonts.lexend(
@@ -249,6 +332,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                                 ),
                               ],
                             ),
+
                             SizedBox(height: screenHeight * 0.015),
 
                             // Driver info
@@ -263,27 +347,35 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                                   ),
                                 ),
                                 SizedBox(width: screenWidth * 0.03),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      widget.ride.driverName,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.038,
-                                        fontWeight: FontWeight.w500,
+                                // Make driver info flexible to avoid overflow on small screens
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.ride.driverName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.038,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      widget.ride.driverPhone,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.032,
-                                        color: Colors.grey[600],
+                                      Text(
+                                        widget.ride.driverPhone,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.032,
+                                          color: Colors.grey[600],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
+
                             SizedBox(height: screenHeight * 0.015),
 
                             // Requests header
@@ -307,6 +399,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                                 ),
                               ],
                             ),
+
                             SizedBox(height: screenHeight * 0.012),
 
                             // Requests list or placeholder

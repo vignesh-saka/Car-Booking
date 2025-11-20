@@ -18,11 +18,23 @@ class HistoryRideCard extends StatelessWidget {
     required this.screenWidth,
     required this.screenHeight,
     required this.onTap,
-    required this.isLive,  // Changed to required instead of optional
+    required this.isLive,
   });
+
+  /// Returns the first word before the first comma in [s].
+  /// Example: "Hyderabad, Telangana" -> "Hyderabad"
+  String _cityFirstWord(String? s) {
+    if (s == null || s.trim().isEmpty) return '';
+    final beforeComma = s.split(',')[0].trim();
+    final parts = beforeComma.split(RegExp(r'\s+'));
+    return parts.isNotEmpty ? parts[0] : beforeComma;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final fromCity = _cityFirstWord(ride.from);
+    final toCity = _cityFirstWord(ride.to);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -35,34 +47,58 @@ class HistoryRideCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Time and Location
+            // Time and Location (top row)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      ride.startTime,
-                      style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.035,
-                        fontWeight: FontWeight.w500,
+                // Left group: start time + from city
+                Flexible(
+                  child: Row(
+                    children: [
+                      // Start time
+                      Text(
+                        ride.startTime,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.035,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: screenWidth * 0.02),
-                    Icon(Icons.location_on,
-                        size: screenWidth * 0.04, color: Colors.black54),
-                    SizedBox(width: screenWidth * 0.01),
-                    Text(
-                      ride.from,
-                      style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.038,
-                        fontWeight: FontWeight.w600,
+
+                      SizedBox(width: screenWidth * 0.02),
+
+                      // From city with icon - use Flexible to prevent overflow
+                      Flexible(
+                        child: Row(
+                          children: [
+                            Icon(Icons.location_on,
+                                size: screenWidth * 0.04, color: Colors.black54),
+                            SizedBox(width: screenWidth * 0.01),
+                            Flexible(
+                              child: Text(
+                                fromCity,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.lexend(
+                                  fontSize: screenWidth * 0.038,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+
+                // Right: price
+                SizedBox(width: screenWidth * 0.02),
                 Text(
                   'Rs: ${ride.price}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.lexend(
                     fontSize: screenWidth * 0.035,
                     fontWeight: FontWeight.w600,
@@ -71,11 +107,16 @@ class HistoryRideCard extends StatelessWidget {
                 ),
               ],
             ),
+
             SizedBox(height: screenHeight * 0.008),
+
+            // Second row: end time + to city
             Row(
               children: [
                 Text(
                   ride.endTime,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.lexend(
                     fontSize: screenWidth * 0.035,
                     fontWeight: FontWeight.w500,
@@ -85,11 +126,17 @@ class HistoryRideCard extends StatelessWidget {
                 Icon(Icons.location_on,
                     size: screenWidth * 0.04, color: Colors.black54),
                 SizedBox(width: screenWidth * 0.01),
-                Text(
-                  ride.to,
-                  style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.038,
-                    fontWeight: FontWeight.w600,
+
+                // To city (use Flexible)
+                Flexible(
+                  child: Text(
+                    toCity,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.lexend(
+                      fontSize: screenWidth * 0.038,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -135,7 +182,7 @@ class HistoryRideCard extends StatelessWidget {
                   ),
                 ),
             ],
-            
+
             SizedBox(height: screenHeight * 0.015),
 
             // Driver Info
@@ -147,24 +194,31 @@ class HistoryRideCard extends StatelessWidget {
                   child: Icon(Icons.person, color: Colors.grey[600]),
                 ),
                 SizedBox(width: screenWidth * 0.03),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ride.driverName,
-                      style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.038,
-                        fontWeight: FontWeight.w500,
+                // Make driver info flexible to avoid overflow on small screens
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ride.driverName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.038,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    Text(
-                      ride.driverPhone,
-                      style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.032,
-                        color: Colors.grey[600],
+                      Text(
+                        ride.driverPhone,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.032,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

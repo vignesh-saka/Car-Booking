@@ -4,6 +4,7 @@ import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
 import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
+import 'package:bookmycar/auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -517,12 +518,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
-                // TODO: Implement sign out logic
-                /*
-                await FirebaseAuth.instance.signOut();
-                Navigator.of(context).pushReplacementNamed('/login');
-                */
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                );
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(

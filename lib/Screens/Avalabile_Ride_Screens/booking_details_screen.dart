@@ -31,8 +31,17 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     if (numberOfPassengers < widget.ride.availableSeats) {
       setState(() {
         numberOfPassengers++;
-        passengers.add(PassengerDetail(name: '', age: '', phone: ''));
+        if (passengers.length < numberOfPassengers) {
+          passengers.add(PassengerDetail(name: '', age: '', phone: ''));
+        }
       });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No more seats available', style: GoogleFonts.lexend()),
+          backgroundColor: const Color(0xFFFF3B30),
+        ),
+      );
     }
   }
 
@@ -40,7 +49,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     if (numberOfPassengers > 1) {
       setState(() {
         numberOfPassengers--;
-        passengers.removeLast();
+        if (passengers.length > numberOfPassengers) {
+          passengers.removeLast();
+        }
       });
     }
   }
@@ -50,52 +61,57 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       selectedIndex = index;
     });
     switch (index) {
-    case 0:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => PublishRideScreen()),
-      );
-      break;
-
-    case 1:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => MyBookingsScreen()),
-      );
-      break;
-
-    case 2:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SearchScreen()),
-      );
-      break;
-
-    case 3:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HistoryScreen()),
-      );
-      break;
-
-    case 4:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ProfileScreen()),
-      );
-      break;
-
-    default:
-      break;
-  }
+      case 0:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PublishRideScreen()),
+        );
+        break;
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => MyBookingsScreen()),
+        );
+        break;
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => SearchScreen()),
+        );
+        break;
+      case 3:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => HistoryScreen()),
+        );
+        break;
+      case 4:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ProfileScreen()),
+        );
+        break;
+      default:
+        break;
+    }
   }
 
   void onBookNow() {
+    // Ensure passengers list length matches numberOfPassengers
+    while (passengers.length < numberOfPassengers) {
+      passengers.add(PassengerDetail(name: '', age: '', phone: ''));
+    }
+
     bool allFieldsFilled = true;
-    for (int i = 0; i < passengers.length; i++) {
-      if (passengers[i].name.isEmpty ||
-          passengers[i].age.isEmpty ||
-          passengers[i].phone.isEmpty) {
+    for (int i = 0; i < numberOfPassengers; i++) {
+      final p = passengers[i];
+      // Name and age required for all passengers
+      if (p.name.trim().isEmpty || p.age.trim().isEmpty) {
+        allFieldsFilled = false;
+        break;
+      }
+      // Phone required only for first passenger
+      if (i == 0 && p.phone.trim().isEmpty) {
         allFieldsFilled = false;
         break;
       }
@@ -105,17 +121,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please fill all passenger details',
+            'Please fill required passenger details.\n(First passenger: name, age, phone. Others: name, age.)',
             style: GoogleFonts.lexend(),
           ),
           backgroundColor: const Color(0xFFFF3B30),
+          duration: const Duration(seconds: 3),
         ),
       );
       return;
     }
 
+    // Debug prints
     print('Booking confirmed for $numberOfPassengers passengers');
-    for (int i = 0; i < passengers.length; i++) {
+    for (int i = 0; i < numberOfPassengers; i++) {
       print(
         'Passenger ${i + 1}: ${passengers[i].name}, ${passengers[i].age}, ${passengers[i].phone}',
       );
@@ -128,6 +146,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         duration: const Duration(seconds: 1),
       ),
     );
+
     Future.delayed(const Duration(milliseconds: 600), () {
       Navigator.push(
         context,
@@ -139,7 +158,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth  = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -150,14 +169,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             decoration: const BoxDecoration(
               color: Color(0xFFFF3B30),
               borderRadius: BorderRadius.only(
-                bottomLeft:  Radius.circular(25),
+                bottomLeft: Radius.circular(25),
                 bottomRight: Radius.circular(25),
               ),
             ),
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: screenWidth * 0.05,
-                vertical:   screenHeight * 0.025,
+                vertical: screenHeight * 0.025,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,85 +236,106 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Ride Summary
+                        // Combined Time + Price Row (fixed to avoid overflow, price at top)
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.ride.departureTime,
-                                  style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                SizedBox(height: screenHeight * 0.004),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: screenWidth * 0.04,
-                                      color: Colors.grey[600],
+                            // Left: times & locations — allowed to take remaining space
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Departure block
+                                  Text(
+                                    widget.ride.departureTime,
+                                    style: GoogleFonts.lexend(
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
                                     ),
-                                    SizedBox(width: screenWidth * 0.01),
-                                    Text(
-                                      widget.ride.fromCity,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.035,
+                                  ),
+                                  SizedBox(height: screenHeight * 0.004),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on,
+                                        size: screenWidth * 0.04,
                                         color: Colors.grey[600],
                                       ),
+                                      SizedBox(width: screenWidth * 0.01),
+                                      Flexible(
+                                        child: Text(
+                                          widget.ride.fromCity,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.lexend(
+                                            fontSize: screenWidth * 0.035,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: screenHeight * 0.012),
+
+                                  // Arrival block
+                                  Text(
+                                    widget.ride.arrivalTime,
+                                    style: GoogleFonts.lexend(
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Spacer(),
-                            Text(
-                              'Rs. ${widget.ride.price}',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.042,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFFFF3B30),
+                                  ),
+                                  SizedBox(height: screenHeight * 0.004),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on,
+                                        size: screenWidth * 0.04,
+                                        color: Colors.grey[600],
+                                      ),
+                                      SizedBox(width: screenWidth * 0.01),
+                                      Flexible(
+                                        child: Text(
+                                          widget.ride.toCity,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.lexend(
+                                            fontSize: screenWidth * 0.035,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                        SizedBox(height: screenHeight * 0.012),
 
-                        Row(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.ride.arrivalTime,
+                            // Small horizontal gap
+                            SizedBox(width: screenWidth * 0.02),
+
+                            // Right: price constrained so it can't exceed a portion of screen width
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: screenWidth * 0.32,
+                                minWidth: 0,
+                              ),
+                              child: Align(
+                                alignment: Alignment.topRight,
+                                child: Text(
+                                  'Rs. ${widget.ride.price}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.right,
                                   style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.04,
+                                    fontSize: screenWidth * 0.042,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
+                                    color: const Color(0xFFFF3B30),
                                   ),
                                 ),
-                                SizedBox(height: screenHeight * 0.004),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: screenWidth * 0.04,
-                                      color: Colors.grey[600],
-                                    ),
-                                    SizedBox(width: screenWidth * 0.01),
-                                    Text(
-                                      widget.ride.toCity,
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.035,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
@@ -436,22 +476,29 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
                         SizedBox(height: screenHeight * 0.025),
 
+                        // Ensure passenger list length matches UI
                         ...List.generate(
                           numberOfPassengers,
-                          (index) => PassengerForm(
-                            passengerNumber: index + 1,
-                            screenWidth: screenWidth,
-                            screenHeight: screenHeight,
-                            onNameChanged: (value) {
-                              passengers[index].name = value;
-                            },
-                            onAgeChanged: (value) {
-                              passengers[index].age = value;
-                            },
-                            onPhoneChanged: (value) {
-                              passengers[index].phone = value;
-                            },
-                          ),
+                          (index) {
+                            if (index >= passengers.length) {
+                              passengers.add(PassengerDetail(name: '', age: '', phone: ''));
+                            }
+                            return PassengerForm(
+                              passengerNumber: index + 1,
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onNameChanged: (value) {
+                                passengers[index].name = value;
+                              },
+                              onAgeChanged: (value) {
+                                passengers[index].age = value;
+                              },
+                              onPhoneChanged: (value) {
+                                passengers[index].phone = value;
+                              },
+                              phoneRequired: index == 0,
+                            );
+                          },
                         ),
 
                         SizedBox(height: screenHeight * 0.02),
@@ -516,6 +563,7 @@ class PassengerForm extends StatelessWidget {
   final Function(String) onNameChanged;
   final Function(String) onAgeChanged;
   final Function(String) onPhoneChanged;
+  final bool phoneRequired;
 
   const PassengerForm({
     super.key,
@@ -525,6 +573,7 @@ class PassengerForm extends StatelessWidget {
     required this.onNameChanged,
     required this.onAgeChanged,
     required this.onPhoneChanged,
+    this.phoneRequired = false,
   });
 
   @override
@@ -630,7 +679,7 @@ class PassengerForm extends StatelessWidget {
           SizedBox(height: screenHeight * 0.015),
 
           Text(
-            'Phone',
+            'Phone${phoneRequired ? ' *' : ' (optional)'}',
             style: GoogleFonts.lexend(
               fontSize: screenWidth * 0.035,
               color: Colors.grey[700],
@@ -641,7 +690,7 @@ class PassengerForm extends StatelessWidget {
             onChanged: onPhoneChanged,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              hintText: 'Enter Phone Number',
+              hintText: phoneRequired ? 'Enter Phone Number' : 'Enter Phone Number (optional)',
               hintStyle: GoogleFonts.lexend(
                 color: Colors.grey[400],
                 fontSize: screenWidth * 0.035,

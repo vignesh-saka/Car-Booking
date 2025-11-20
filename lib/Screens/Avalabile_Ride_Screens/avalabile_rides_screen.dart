@@ -339,7 +339,6 @@ class RideData {
 }
 
 // ---------------- RIDE CARD (UNCHANGED) ----------------
-// (Keeping EXACT UI as requested)
 class RideCard extends StatelessWidget {
   final RideData ride;
   final double screenWidth;
@@ -353,6 +352,48 @@ class RideCard extends StatelessWidget {
     required this.screenHeight,
     required this.onTap,
   });
+
+  /// Split "City, State" → { city: "City", rest: "State" }
+  Map<String, String> splitAddress(String text) {
+    final parts = text.split(",");
+    final city = parts[0].trim();
+    final rest = parts.length > 1 ? parts.sublist(1).join(",").trim() : "";
+    return {"city": city, "rest": rest};
+  }
+
+  /// UI builder → City(bold) + Rest(normal)
+  Widget buildAddress(String text, bool alignRight) {
+    final address = splitAddress(text);
+
+    return Column(
+      crossAxisAlignment:
+          alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          address["city"]!,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.lexend(
+            fontSize: screenWidth * 0.036,
+            fontWeight: FontWeight.w600, // BOLD
+            color: Colors.black87,
+          ),
+        ),
+        if (address["rest"]!.isNotEmpty)
+          Text(
+            address["rest"]!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.lexend(
+              fontSize: screenWidth * 0.032,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey[600],
+            ),
+          ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -376,33 +417,33 @@ class RideCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /// ------------------ TOP ROW ------------------
             Row(
               children: [
+                /// LEFT SIDE → From address
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(ride.departureTime,
-                          style: GoogleFonts.lexend(
-                            fontSize: screenWidth * 0.04,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          )),
+                      Text(
+                        ride.departureTime,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.04,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
                       SizedBox(height: screenHeight * 0.004),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.location_on,
                               size: screenWidth * 0.04,
                               color: Colors.grey[600]),
                           SizedBox(width: screenWidth * 0.01),
+
                           Flexible(
-                            child: Text(
-                              ride.fromCity,
-                              style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.035,
-                                  color: Colors.grey[600]),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: buildAddress(ride.fromCity, false),
                           ),
                         ],
                       ),
@@ -410,35 +451,33 @@ class RideCard extends StatelessWidget {
                   ),
                 ),
 
+                /// Arrow icon
                 Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
                   child: Icon(Icons.arrow_forward,
                       color: Colors.grey[400], size: screenWidth * 0.05),
                 ),
 
+                /// RIGHT SIDE → To address
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(ride.arrivalTime,
-                          style: GoogleFonts.lexend(
-                            fontSize: screenWidth * 0.04,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          )),
+                      Text(
+                        ride.arrivalTime,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.04,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
                       SizedBox(height: screenHeight * 0.004),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Flexible(
-                            child: Text(
-                              ride.toCity,
-                              style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.035,
-                                  color: Colors.grey[600]),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: buildAddress(ride.toCity, true),
                           ),
                           SizedBox(width: screenWidth * 0.01),
                           Icon(Icons.location_on,
@@ -452,8 +491,10 @@ class RideCard extends StatelessWidget {
               ],
             ),
 
+            /// Divider
             Divider(height: screenHeight * 0.025, color: Colors.grey[300]),
 
+            /// ------------------ DRIVER + PRICE ------------------
             Row(
               children: [
                 CircleAvatar(
@@ -463,29 +504,39 @@ class RideCard extends StatelessWidget {
                       color: Colors.grey[600], size: screenWidth * 0.05),
                 ),
                 SizedBox(width: screenWidth * 0.03),
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(ride.driverName,
-                          style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.038,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87),
-                          overflow: TextOverflow.ellipsis),
-                      Text(ride.driverPhone,
-                          style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.032,
-                              color: Colors.grey[600])),
+                      Text(
+                        ride.driverName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.038,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        ride.driverPhone,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.032,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                     ],
                   ),
                 ),
+
                 Text(
                   'Rs. ${ride.price}',
                   style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.042,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFFF3B30)),
+                    fontSize: screenWidth * 0.042,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFFF3B30),
+                  ),
                 ),
               ],
             ),
