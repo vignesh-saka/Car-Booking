@@ -5,6 +5,8 @@ import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
 import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:bookmycar/auth/login_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,11 +23,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
 
-  // Default user data - Replace with backend data
-  String userName = 'Vignesh Kumar Saka';
-  String userEmail = 'vigneshkumzr@gmail.com';
+  // Default user data - now dynamic from Firestore
+  String userName = '';
+  String userEmail = '';
   String defaultImagePath =
       'assets/images/default_avatar.png'; // Set your default image path
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final uid = user.uid;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(uid)
+          .get();
+
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        setState(() {
+          userName = (data["name"] ?? "").toString();
+          userEmail = (data["email"] ?? user.email ?? "").toString();
+        });
+      } else {
+        // Fallback to FirebaseAuth info if Firestore doc missing
+        setState(() {
+          userName = user.displayName ?? '';
+          userEmail = user.email ?? '';
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading user data: $e");
+    }
+  }
 
   void onNavItemTapped(int index) {
     setState(() {
@@ -35,35 +73,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case 0:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PublishRideScreen()),
+          MaterialPageRoute(builder: (context) => const PublishRideScreen()),
         );
         break;
 
       case 1:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => MyBookingsScreen()),
+          MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
         );
         break;
 
       case 2:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => SearchScreen()),
+          MaterialPageRoute(builder: (context) => const SearchScreen()),
         );
         break;
 
       case 3:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => HistoryScreen()),
+          MaterialPageRoute(builder: (context) => const HistoryScreen()),
         );
         break;
 
       case 4:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => ProfileScreen()),
+          MaterialPageRoute(builder: (context) => const ProfileScreen()),
         );
         break;
 
@@ -236,11 +274,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 : Image.asset(
                                     defaultImagePath,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
+                                    errorBuilder:
+                                        (context, error, stackTrace) {
                                       // Fallback if image not found
                                       return Container(
                                         color: Colors.grey[300],
-                                        child: Image(
+                                        child: const Image(
                                           image: AssetImage(
                                             'assets/images/profile.png',
                                           ),
@@ -329,7 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ProfileScreen(),
+                              builder: (context) => const ProfileScreen(),
                             ),
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -348,11 +387,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         screenWidth: screenWidth,
                         screenHeight: screenHeight,
                         onTap: () {
-                          // TODO: Navigate to My Bookings screen
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => MyBookingsScreen(),
+                              builder: (context) => const MyBookingsScreen(),
                             ),
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -371,11 +409,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         screenWidth: screenWidth,
                         screenHeight: screenHeight,
                         onTap: () {
-                          // TODO: Navigate to Ride History screen
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => HistoryScreen(),
+                              builder: (context) => const HistoryScreen(),
                             ),
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -520,7 +557,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

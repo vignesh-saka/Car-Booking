@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/ride.dart';
 import 'ride_details_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart'; 
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -39,8 +40,15 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Future<void> fetchRides() async {
+
+    final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    // Not logged in -> nothing to show
+    return;
+  }
     FirebaseFirestore.instance
         .collection("rides")
+        .where("createdBy", isEqualTo: user.uid) 
         .orderBy("createdAt", descending: true)
         .snapshots()
         .listen((snapshot) {

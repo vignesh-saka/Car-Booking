@@ -3,6 +3,7 @@
 // ============================================
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';  // 👈 ADDED
 import '../models/ride.dart';
 
 class HistoryRideCard extends StatelessWidget {
@@ -72,8 +73,11 @@ class HistoryRideCard extends StatelessWidget {
                       Flexible(
                         child: Row(
                           children: [
-                            Icon(Icons.location_on,
-                                size: screenWidth * 0.04, color: Colors.black54),
+                            Icon(
+                              Icons.location_on,
+                              size: screenWidth * 0.04,
+                              color: Colors.black54,
+                            ),
                             SizedBox(width: screenWidth * 0.01),
                             Flexible(
                               child: Text(
@@ -123,8 +127,11 @@ class HistoryRideCard extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: screenWidth * 0.02),
-                Icon(Icons.location_on,
-                    size: screenWidth * 0.04, color: Colors.black54),
+                Icon(
+                  Icons.location_on,
+                  size: screenWidth * 0.04,
+                  color: Colors.black54,
+                ),
                 SizedBox(width: screenWidth * 0.01),
 
                 // To city (use Flexible)
@@ -145,42 +152,74 @@ class HistoryRideCard extends StatelessWidget {
             // Only show status button for Live rides
             if (isLive) ...[
               SizedBox(height: screenHeight * 0.015),
-              if (ride.hasPendingRequests)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF4444),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'You have Pending Requests',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.035,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'You have No Pending Requests',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.035,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+
+              // 👇 DYNAMIC PENDING / NO PENDING USING FIRESTORE
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('ride_requests')
+                    .where('rideId', isEqualTo: ride.id ?? '')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  bool hasPending = false;
+
+                  if (snapshot.hasData) {
+                    for (final doc in snapshot.data!.docs) {
+                      final data =
+                          doc.data() as Map<String, dynamic>? ?? {};
+                      final status =
+                          (data['status'] ?? '').toString().toLowerCase();
+                      if (status == 'pending' || status == 'requested') {
+                        hasPending = true;
+                        break;
+                      }
+                    }
+                  }
+
+                  // If still loading and no data yet, you can choose default.
+                  // We'll default to "No Pending Requests" to avoid false warnings.
+                  if (hasPending) {
+                    return Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        vertical: screenHeight * 0.01,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF4444),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'You have Pending Requests',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.035,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  } else {
+                    return Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        vertical: screenHeight * 0.01,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'You have No Pending Requests',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.035,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
             ],
 
             SizedBox(height: screenHeight * 0.015),

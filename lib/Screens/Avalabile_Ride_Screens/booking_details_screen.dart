@@ -1,8 +1,6 @@
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.dart';
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/bookingsucess_screen.dart';
 import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
-// ignore: unused_import
-import 'package:bookmycar/Screens/Comman/nav_bar_item.dart';
 import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
@@ -11,13 +9,18 @@ import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Firestore & Auth
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 class BookingDetailsScreen extends StatefulWidget {
   final RideData ride;
 
   const BookingDetailsScreen({super.key, required this.ride});
 
   @override
-  State<BookingDetailsScreen> createState() => _BookingDetailsScreenState();
+  State<BookingDetailsScreen> createState() =>
+      _BookingDetailsScreenState();
 }
 
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
@@ -32,13 +35,15 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       setState(() {
         numberOfPassengers++;
         if (passengers.length < numberOfPassengers) {
-          passengers.add(PassengerDetail(name: '', age: '', phone: ''));
+          passengers.add(
+              PassengerDetail(name: '', age: '', phone: ''));
         }
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No more seats available', style: GoogleFonts.lexend()),
+          content: Text('No more seats available',
+              style: GoogleFonts.lexend()),
           backgroundColor: const Color(0xFFFF3B30),
         ),
       );
@@ -64,31 +69,36 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       case 0:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PublishRideScreen()),
+          MaterialPageRoute(
+              builder: (context) => const PublishRideScreen()),
         );
         break;
       case 1:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => MyBookingsScreen()),
+          MaterialPageRoute(
+              builder: (context) => const MyBookingsScreen()),
         );
         break;
       case 2:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => SearchScreen()),
+          MaterialPageRoute(
+              builder: (context) => const SearchScreen()),
         );
         break;
       case 3:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => HistoryScreen()),
+          MaterialPageRoute(
+              builder: (context) => const HistoryScreen()),
         );
         break;
       case 4:
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => ProfileScreen()),
+          MaterialPageRoute(
+              builder: (context) => const ProfileScreen()),
         );
         break;
       default:
@@ -96,64 +106,172 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-  void onBookNow() {
-    // Ensure passengers list length matches numberOfPassengers
-    while (passengers.length < numberOfPassengers) {
-      passengers.add(PassengerDetail(name: '', age: '', phone: ''));
-    }
+ // ----------------------------------------------------------
+// Save booking to Firestore + create ride_request
+// ----------------------------------------------------------
+void onBookNow() async {
+  // Ensure passengers list length matches numberOfPassengers
+  while (passengers.length < numberOfPassengers) {
+    passengers.add(PassengerDetail(name: '', age: '', phone: ''));
+  }
 
-    bool allFieldsFilled = true;
-    for (int i = 0; i < numberOfPassengers; i++) {
-      final p = passengers[i];
-      // Name and age required for all passengers
-      if (p.name.trim().isEmpty || p.age.trim().isEmpty) {
-        allFieldsFilled = false;
-        break;
-      }
-      // Phone required only for first passenger
-      if (i == 0 && p.phone.trim().isEmpty) {
-        allFieldsFilled = false;
-        break;
-      }
+  bool allFieldsFilled = true;
+  for (int i = 0; i < numberOfPassengers; i++) {
+    final p = passengers[i];
+    // Name and age required for all passengers
+    if (p.name.trim().isEmpty || p.age.trim().isEmpty) {
+      allFieldsFilled = false;
+      break;
     }
+    // Phone required only for first passenger
+    if (i == 0 && p.phone.trim().isEmpty) {
+      allFieldsFilled = false;
+      break;
+    }
+  }
 
-    if (!allFieldsFilled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please fill required passenger details.\n(First passenger: name, age, phone. Others: name, age.)',
-            style: GoogleFonts.lexend(),
-          ),
-          backgroundColor: const Color(0xFFFF3B30),
-          duration: const Duration(seconds: 3),
+  if (!allFieldsFilled) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Please fill required passenger details.\n(First passenger: name, age, phone. Others: name, age.)',
+          style: GoogleFonts.lexend(),
         ),
-      );
-      return;
-    }
+        backgroundColor: const Color(0xFFFF3B30),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    return;
+  }
 
-    // Debug prints
-    print('Booking confirmed for $numberOfPassengers passengers');
-    for (int i = 0; i < numberOfPassengers; i++) {
-      print(
-        'Passenger ${i + 1}: ${passengers[i].name}, ${passengers[i].age}, ${passengers[i].phone}',
-      );
+  // ✅ Require login (needed for Firestore rules)
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Please sign in to book a ride',
+          style: GoogleFonts.lexend(),
+        ),
+        backgroundColor: const Color(0xFFFF3B30),
+      ),
+    );
+    return;
+  }
+  final String userId = currentUser.uid;
+
+  // Build passengers list to save (array)
+  final List<Map<String, dynamic>> passengerMaps =
+      List.generate(numberOfPassengers, (index) {
+    final p = passengers[index];
+    return {
+      'name': p.name.trim(),
+      'age': p.age.trim(),
+      'phone': p.phone.trim(),
+      'isPrimary': index == 0,
+    };
+  });
+
+  // -------- Booking document --------
+  final Map<String, dynamic> bookingDoc = {
+    'userId': userId, // ✅ must match request.auth.uid for rules
+    'createdAt': FieldValue.serverTimestamp(),
+    'status': 'requested', // initial status
+    'rideId': widget.ride.id, // used to link with ride & ride_details
+    'date': widget.ride.date, // for splitting Booked / All Bookings
+
+    // ride snapshot
+    'ride': {
+      'departureTime': widget.ride.departureTime,
+      'arrivalTime': widget.ride.arrivalTime,
+      'fromCity': widget.ride.fromCity,
+      'toCity': widget.ride.toCity,
+      'driverName': widget.ride.driverName,
+      'driverPhone': widget.ride.driverPhone,
+      'price': widget.ride.price,
+      'date': widget.ride.date,
+    },
+
+    // all passengers
+    'passengers': passengerMaps,
+    'seatsBooked': numberOfPassengers,
+
+    // primary passenger (for driver's queries)
+    'passengerName': passengers[0].name.trim(),
+    'passengerPhone': passengers[0].phone.trim(),
+    'passengerAge': passengers[0].age.trim(),
+  };
+
+  try {
+    // Save booking
+    final docRef = await FirebaseFirestore.instance
+        .collection('bookings')
+        .add(bookingDoc);
+
+    debugPrint('Booking created: ${docRef.id}');
+
+    // Create ride_request for driver (passenger creates it)
+    try {
+      final String passengerUid = currentUser.uid;
+      final String rideId = (widget.ride.id ?? '').toString();
+
+      final Map<String, dynamic> rideRequestDoc = {
+        'rideId': rideId,
+        'passengerUid': passengerUid, // ✅ must equal auth.uid (rules)
+        'passengerName': passengers[0].name.trim(),
+        'passengerPhone': passengers[0].phone.trim(),
+        'passengerAge': passengers[0].age.trim(),
+        'status': 'requested',
+        'bookingId': docRef.id,
+        'groupSize': numberOfPassengers, 
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      await FirebaseFirestore.instance
+          .collection('ride_requests')
+          .add(rideRequestDoc);
+
+      debugPrint('Ride request created for booking ${docRef.id}');
+    } catch (e, st) {
+      debugPrint('Failed to create ride_request: $e\n$st');
+      // Not fatal – booking already exists.
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Booking successful!', style: GoogleFonts.lexend()),
+        content:
+            Text('Booking successful!', style: GoogleFonts.lexend()),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 1),
       ),
     );
 
+    // Navigate to success screen
     Future.delayed(const Duration(milliseconds: 600), () {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => BookingSucessScreen()),
+        MaterialPageRoute(
+          builder: (context) => const BookingSucessScreen(),
+        ),
       );
     });
+  } catch (e, st) {
+    debugPrint('Booking save error: $e\n$st');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Failed to save booking. Please try again.',
+          style: GoogleFonts.lexend(),
+        ),
+        backgroundColor: const Color(0xFFFF3B30),
+      ),
+    );
   }
+}
+
+
+  // --------------------------------------------------------------------
+  // UI build
+  // --------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +297,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 vertical: screenHeight * 0.025,
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   // Header Row
                   Row(
@@ -187,10 +306,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: Container(
-                          padding: EdgeInsets.all(screenWidth * 0.02),
+                          padding: EdgeInsets.all(
+                              screenWidth * 0.02),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white, width: 2),
-                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: Colors.white,
+                                width: 2),
+                            borderRadius:
+                                BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.arrow_back_ios_new,
@@ -204,7 +327,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           child: Text(
                             'Booking Details',
                             style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.055,
+                              fontSize:
+                                  screenWidth * 0.055,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
@@ -220,90 +344,142 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   // Booking Form Card
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(screenWidth * 0.05),
+                    padding: EdgeInsets.all(
+                        screenWidth * 0.05),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius:
+                          BorderRadius.circular(15),
+                      border: Border.all(
+                          color: Colors.grey[300]!),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black
+                              .withOpacity(0.08),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
-                        // Combined Time + Price Row (fixed to avoid overflow, price at top)
+                        // Combined Time + Price Row
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
                           children: [
-                            // Left: times & locations — allowed to take remaining space
+                            // Left: times & locations
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment
+                                        .start,
                                 children: [
                                   // Departure block
                                   Text(
-                                    widget.ride.departureTime,
+                                    widget.ride
+                                        .departureTime,
                                     style: GoogleFonts.lexend(
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      fontSize:
+                                          screenWidth *
+                                              0.04,
+                                      fontWeight:
+                                          FontWeight.w600,
+                                      color:
+                                          Colors.black87,
                                     ),
                                   ),
-                                  SizedBox(height: screenHeight * 0.004),
+                                  SizedBox(
+                                      height:
+                                          screenHeight *
+                                              0.004),
                                   Row(
                                     children: [
                                       Icon(
-                                        Icons.location_on,
-                                        size: screenWidth * 0.04,
-                                        color: Colors.grey[600],
+                                        Icons
+                                            .location_on,
+                                        size: screenWidth *
+                                            0.04,
+                                        color:
+                                            Colors.grey[600],
                                       ),
-                                      SizedBox(width: screenWidth * 0.01),
+                                      SizedBox(
+                                          width:
+                                              screenWidth *
+                                                  0.01),
                                       Flexible(
                                         child: Text(
-                                          widget.ride.fromCity,
+                                          widget.ride
+                                              .fromCity,
                                           maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.lexend(
-                                            fontSize: screenWidth * 0.035,
-                                            color: Colors.grey[600],
+                                          overflow:
+                                              TextOverflow
+                                                  .ellipsis,
+                                          style: GoogleFonts
+                                              .lexend(
+                                            fontSize:
+                                                screenWidth *
+                                                    0.035,
+                                            color: Colors
+                                                .grey[600],
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: screenHeight * 0.012),
+                                  SizedBox(
+                                      height:
+                                          screenHeight *
+                                              0.012),
 
                                   // Arrival block
                                   Text(
-                                    widget.ride.arrivalTime,
+                                    widget.ride
+                                        .arrivalTime,
                                     style: GoogleFonts.lexend(
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      fontSize:
+                                          screenWidth *
+                                              0.04,
+                                      fontWeight:
+                                          FontWeight.w600,
+                                      color:
+                                          Colors.black87,
                                     ),
                                   ),
-                                  SizedBox(height: screenHeight * 0.004),
+                                  SizedBox(
+                                      height:
+                                          screenHeight *
+                                              0.004),
                                   Row(
                                     children: [
                                       Icon(
-                                        Icons.location_on,
-                                        size: screenWidth * 0.04,
-                                        color: Colors.grey[600],
+                                        Icons
+                                            .location_on,
+                                        size: screenWidth *
+                                            0.04,
+                                        color:
+                                            Colors.grey[600],
                                       ),
-                                      SizedBox(width: screenWidth * 0.01),
+                                      SizedBox(
+                                          width:
+                                              screenWidth *
+                                                  0.01),
                                       Flexible(
                                         child: Text(
                                           widget.ride.toCity,
                                           maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.lexend(
-                                            fontSize: screenWidth * 0.035,
-                                            color: Colors.grey[600],
+                                          overflow:
+                                              TextOverflow
+                                                  .ellipsis,
+                                          style: GoogleFonts
+                                              .lexend(
+                                            fontSize:
+                                                screenWidth *
+                                                    0.035,
+                                            color: Colors
+                                                .grey[600],
                                           ),
                                         ),
                                       ),
@@ -313,26 +489,32 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               ),
                             ),
 
-                            // Small horizontal gap
-                            SizedBox(width: screenWidth * 0.02),
-
-                            // Right: price constrained so it can't exceed a portion of screen width
+                            // Right: price
+                            SizedBox(
+                                width: screenWidth * 0.02),
                             ConstrainedBox(
                               constraints: BoxConstraints(
-                                maxWidth: screenWidth * 0.32,
+                                maxWidth:
+                                    screenWidth * 0.32,
                                 minWidth: 0,
                               ),
                               child: Align(
-                                alignment: Alignment.topRight,
+                                alignment:
+                                    Alignment.topRight,
                                 child: Text(
                                   'Rs. ${widget.ride.price}',
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow
+                                      .ellipsis,
                                   textAlign: TextAlign.right,
                                   style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.042,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFFFF3B30),
+                                    fontSize:
+                                        screenWidth *
+                                            0.042,
+                                    fontWeight:
+                                        FontWeight.w600,
+                                    color: const Color(
+                                        0xFFFF3B30),
                                   ),
                                 ),
                               ),
@@ -350,31 +532,44 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           children: [
                             CircleAvatar(
                               radius: screenWidth * 0.05,
-                              backgroundColor: Colors.grey[300],
+                              backgroundColor:
+                                  Colors.grey[300],
                               child: Icon(
                                 Icons.person,
                                 color: Colors.grey[600],
                                 size: screenWidth * 0.05,
                               ),
                             ),
-                            SizedBox(width: screenWidth * 0.03),
+                            SizedBox(
+                                width: screenWidth * 0.03),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment
+                                        .start,
                                 children: [
                                   Text(
-                                    widget.ride.driverName,
+                                    widget.ride
+                                        .driverName,
                                     style: GoogleFonts.lexend(
-                                      fontSize: screenWidth * 0.038,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black87,
+                                      fontSize:
+                                          screenWidth *
+                                              0.038,
+                                      fontWeight:
+                                          FontWeight.w500,
+                                      color:
+                                          Colors.black87,
                                     ),
                                   ),
                                   Text(
-                                    widget.ride.driverPhone,
+                                    widget.ride
+                                        .driverPhone,
                                     style: GoogleFonts.lexend(
-                                      fontSize: screenWidth * 0.032,
-                                      color: Colors.grey[600],
+                                      fontSize:
+                                          screenWidth *
+                                              0.032,
+                                      color:
+                                          Colors.grey[600],
                                     ),
                                   ),
                                 ],
@@ -392,76 +587,96 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           child: Text(
                             'No. of Passengers: ${widget.ride.availableSeats}',
                             style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.038,
+                              fontSize:
+                                  screenWidth * 0.038,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
                             ),
                           ),
                         ),
 
-                        SizedBox(height: screenHeight * 0.02),
+                        SizedBox(
+                            height: screenHeight * 0.02),
 
                         Center(
                           child: Text(
                             'Please Enter Booking Details to Continue',
                             style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.035,
+                              fontSize:
+                                  screenWidth * 0.035,
                               color: Colors.grey[600],
                             ),
                             textAlign: TextAlign.center,
                           ),
                         ),
 
-                        SizedBox(height: screenHeight * 0.02),
+                        SizedBox(
+                            height: screenHeight * 0.02),
 
                         Center(
                           child: Text(
                             'Enter No.of Passengers:',
                             style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.038,
+                              fontSize:
+                                  screenWidth * 0.038,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
                             ),
                           ),
                         ),
-                        SizedBox(height: screenHeight * 0.012),
+                        SizedBox(
+                            height: screenHeight * 0.012),
 
                         Center(
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment:
+                                MainAxisAlignment.center,
                             children: [
                               GestureDetector(
                                 onTap: decrementPassengers,
                                 child: Container(
-                                  width: screenWidth * 0.1,
-                                  height: screenWidth * 0.1,
+                                  width:
+                                      screenWidth * 0.1,
+                                  height:
+                                      screenWidth * 0.1,
                                   decoration: BoxDecoration(
                                     color: Colors.grey[300],
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
                                     Icons.remove,
-                                    color: Color(0xFFFF4444),
+                                    color:
+                                        Color(0xFFFF4444),
                                   ),
                                 ),
                               ),
-                              SizedBox(width: screenWidth * 0.05),
+                              SizedBox(
+                                  width:
+                                      screenWidth * 0.05),
                               Text(
                                 '$numberOfPassengers',
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.06,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize:
+                                      screenWidth * 0.06,
+                                  fontWeight:
+                                      FontWeight.w600,
                                   color: Colors.black87,
                                 ),
                               ),
-                              SizedBox(width: screenWidth * 0.05),
+                              SizedBox(
+                                  width:
+                                      screenWidth * 0.05),
                               GestureDetector(
                                 onTap: incrementPassengers,
                                 child: Container(
-                                  width: screenWidth * 0.1,
-                                  height: screenWidth * 0.1,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF4444),
+                                  width:
+                                      screenWidth * 0.1,
+                                  height:
+                                      screenWidth * 0.1,
+                                  decoration:
+                                      const BoxDecoration(
+                                    color:
+                                        Color(0xFFFF4444),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -474,55 +689,92 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           ),
                         ),
 
-                        SizedBox(height: screenHeight * 0.025),
+                        SizedBox(
+                            height: screenHeight * 0.025),
 
-                        // Ensure passenger list length matches UI
+                        // Passenger forms
                         ...List.generate(
                           numberOfPassengers,
                           (index) {
-                            if (index >= passengers.length) {
-                              passengers.add(PassengerDetail(name: '', age: '', phone: ''));
+                            if (index >=
+                                passengers.length) {
+                              passengers.add(
+                                PassengerDetail(
+                                    name: '',
+                                    age: '',
+                                    phone: ''),
+                              );
                             }
                             return PassengerForm(
-                              passengerNumber: index + 1,
-                              screenWidth: screenWidth,
-                              screenHeight: screenHeight,
-                              onNameChanged: (value) {
-                                passengers[index].name = value;
+                              passengerNumber:
+                                  index + 1,
+                              screenWidth:
+                                  screenWidth,
+                              screenHeight:
+                                  screenHeight,
+                              onNameChanged:
+                                  (value) {
+                                passengers[index]
+                                        .name =
+                                    value;
                               },
-                              onAgeChanged: (value) {
-                                passengers[index].age = value;
+                              onAgeChanged:
+                                  (value) {
+                                passengers[index]
+                                        .age =
+                                    value;
                               },
-                              onPhoneChanged: (value) {
-                                passengers[index].phone = value;
+                              onPhoneChanged:
+                                  (value) {
+                                passengers[index]
+                                        .phone =
+                                    value;
                               },
-                              phoneRequired: index == 0,
+                              phoneRequired:
+                                  index == 0,
                             );
                           },
                         ),
 
-                        SizedBox(height: screenHeight * 0.02),
+                        SizedBox(
+                            height: screenHeight * 0.02),
 
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: onBookNow,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF3B30),
-                              padding: EdgeInsets.symmetric(
-                                vertical: screenHeight * 0.02,
+                            style: ElevatedButton
+                                .styleFrom(
+                              backgroundColor:
+                                  const Color(
+                                      0xFFFF3B30),
+                              padding: EdgeInsets
+                                  .symmetric(
+                                vertical:
+                                    screenHeight *
+                                        0.02,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              shape:
+                                  RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                            12),
                               ),
                               elevation: 0,
                             ),
                             child: Text(
                               'Book Now',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.045,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                              style: GoogleFonts
+                                  .lexend(
+                                fontSize:
+                                    screenWidth *
+                                        0.045,
+                                fontWeight:
+                                    FontWeight
+                                        .w600,
+                                color:
+                                    Colors.white,
                               ),
                             ),
                           ),
@@ -553,7 +805,10 @@ class PassengerDetail {
   String age;
   String phone;
 
-  PassengerDetail({required this.name, required this.age, required this.phone});
+  PassengerDetail(
+      {required this.name,
+      required this.age,
+      required this.phone});
 }
 
 class PassengerForm extends StatelessWidget {
@@ -579,7 +834,8 @@ class PassengerForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(bottom: screenHeight * 0.02),
+      margin:
+          EdgeInsets.only(bottom: screenHeight * 0.02),
       padding: EdgeInsets.all(screenWidth * 0.04),
       decoration: BoxDecoration(
         color: Colors.grey[50],
@@ -587,7 +843,8 @@ class PassengerForm extends StatelessWidget {
         border: Border.all(color: Colors.grey[300]!),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Text(
             'Passenger $passengerNumber',
@@ -618,23 +875,30 @@ class PassengerForm extends StatelessWidget {
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: BorderSide(
+                    color: Colors.grey[300]!),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: BorderSide(
+                    color: Colors.grey[300]!),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFFF3B30)),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                    color: Color(0xFFFF3B30)),
               ),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: screenWidth * 0.04,
                 vertical: screenHeight * 0.015,
               ),
             ),
-            style: GoogleFonts.lexend(fontSize: screenWidth * 0.038),
+            style: GoogleFonts.lexend(
+                fontSize: screenWidth * 0.038),
           ),
           SizedBox(height: screenHeight * 0.015),
 
@@ -658,23 +922,30 @@ class PassengerForm extends StatelessWidget {
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: BorderSide(
+                    color: Colors.grey[300]!),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: BorderSide(
+                    color: Colors.grey[300]!),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFFF3B30)),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                    color: Color(0xFFFF3B30)),
               ),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: screenWidth * 0.04,
                 vertical: screenHeight * 0.015,
               ),
             ),
-            style: GoogleFonts.lexend(fontSize: screenWidth * 0.038),
+            style: GoogleFonts.lexend(
+                fontSize: screenWidth * 0.038),
           ),
           SizedBox(height: screenHeight * 0.015),
 
@@ -690,7 +961,9 @@ class PassengerForm extends StatelessWidget {
             onChanged: onPhoneChanged,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              hintText: phoneRequired ? 'Enter Phone Number' : 'Enter Phone Number (optional)',
+              hintText: phoneRequired
+                  ? 'Enter Phone Number'
+                  : 'Enter Phone Number (optional)',
               hintStyle: GoogleFonts.lexend(
                 color: Colors.grey[400],
                 fontSize: screenWidth * 0.035,
@@ -698,23 +971,30 @@ class PassengerForm extends StatelessWidget {
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: BorderSide(
+                    color: Colors.grey[300]!),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: BorderSide(
+                    color: Colors.grey[300]!),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFFF3B30)),
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                    color: Color(0xFFFF3B30)),
               ),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: screenWidth * 0.04,
                 vertical: screenHeight * 0.015,
               ),
             ),
-            style: GoogleFonts.lexend(fontSize: screenWidth * 0.038),
+            style: GoogleFonts.lexend(
+                fontSize: screenWidth * 0.038),
           ),
         ],
       ),

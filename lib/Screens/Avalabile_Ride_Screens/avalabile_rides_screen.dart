@@ -15,12 +15,27 @@ class AvailableRidesScreen extends StatefulWidget {
   final String date;
   final int passengers;
 
+   // NEW: optional robust-matching fields (nullable)
+  final String? fromPlaceId;
+  final double? fromLat;
+  final double? fromLng;
+  final String? toPlaceId;
+  final double? toLat;
+  final double? toLng;
+
   const AvailableRidesScreen({
     super.key,
     required this.from,
     required this.to,
     required this.date,
     required this.passengers,
+    this.fromPlaceId,
+    this.fromLat,
+    this.fromLng,
+    this.toPlaceId,
+    this.toLat,
+    this.toLng,
+
   });
 
   @override
@@ -264,6 +279,7 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                               docs[index].data() as Map<String, dynamic>;
 
                           RideData ride = RideData(
+                            id: docs[index].id, 
                             departureTime: data["pickupTime"],
                             arrivalTime: data["dropTime"],
                             fromCity: data["fromCity"],
@@ -308,6 +324,7 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
 // ---------------- DATA MODEL (UNCHANGED) ----------------
 
 class RideData {
+  final String? id;
   final String departureTime;
   final String arrivalTime;
   final String fromCity;
@@ -321,6 +338,7 @@ class RideData {
   final String description;
 
   RideData({
+    this.id,
     required this.departureTime,
     required this.arrivalTime,
     required this.fromCity,
@@ -331,7 +349,7 @@ class RideData {
     required this.bookedSeats,
     required this.price,
     required this.date,
-    this.description = '',
+    this.description = '', 
 
   });
 

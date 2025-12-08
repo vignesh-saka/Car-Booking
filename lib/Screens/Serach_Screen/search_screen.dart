@@ -1,6 +1,7 @@
-// search_screen.dart
+// // search_screen.dart
 import 'dart:async';
 import 'dart:convert';
+// import 'dart:math';
 
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.dart';
 import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
@@ -60,9 +61,17 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isLoadingFrom = false;
   bool _isLoadingTo = false;
 
-  // Selected lat/lng (optional for submission)
+  // Selected lat/lng & place ids (for robust matching)
   LatLngPair? fromLatLng;
   LatLngPair? toLatLng;
+  String? _fromPlaceId;
+  String? _toPlaceId;
+
+  // Extra optional extracted address components (if needed)
+  String? _fromLocality;
+  String? _fromAdminArea;
+  String? _toLocality;
+  String? _toAdminArea;
 
   // Google API key (you provided earlier). Restrict this in production.
   static const String googleApiKey = 'AIzaSyCwizUugA6ySbo1PnnuNdPxGDXHPZAWtjY';
@@ -104,7 +113,7 @@ class _SearchScreenState extends State<SearchScreen> {
         );
       },
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         dateController.text = '${picked.day}/${picked.month}/${picked.year}';
       });
@@ -113,6 +122,16 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // Search action
   void handleSearch() {
+    // Hide keyboard and suggestions
+    FocusScope.of(context).unfocus();
+    if (!mounted) return;
+    setState(() {
+      fromSuggestions = [];
+      toSuggestions = [];
+      showFromSuggestions = false;
+      showToSuggestions = false;
+    });
+
     if (fromController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -141,6 +160,7 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
 
+    // Navigate and pass place_id/coordinates along with text so backend/screen can match using them
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -149,6 +169,13 @@ class _SearchScreenState extends State<SearchScreen> {
           to: toController.text,
           date: dateController.text,
           passengers: passengers,
+          // optional robust matching props - AvailableRidesScreen should accept them (optional)
+          fromPlaceId: _fromPlaceId,
+          fromLat: fromLatLng?.lat,
+          fromLng: fromLatLng?.lng,
+          toPlaceId: _toPlaceId,
+          toLat: toLatLng?.lat,
+          toLng: toLatLng?.lng,
         ),
       ),
     );
@@ -195,6 +222,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     // hide suggestions if less than 3 chars
     if (trimmed.length < 3) {
+      if (!mounted) return;
       setState(() {
         if (isFrom) {
           fromSuggestions = [];
@@ -227,6 +255,7 @@ class _SearchScreenState extends State<SearchScreen> {
         '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
 
     try {
+      if (!mounted) return;
       setState(() {
         if (isFrom) {
           _isLoadingFrom = true;
@@ -238,20 +267,22 @@ class _SearchScreenState extends State<SearchScreen> {
       final response = await http.get(Uri.parse(request));
       debugPrint('Autocomplete HTTP ${response.statusCode}: ${response.body}');
 
+      if (!mounted) return;
       if (response.statusCode == 200) {
-        final Map data = json.decode(response.body);
+        final Map<String, dynamic> data = json.decode(response.body) as Map<String, dynamic>;
         final String status = (data['status'] ?? '') as String;
 
         if (status == 'OK') {
-          final List predictions = data['predictions'] ?? [];
-          final List<PlacePrediction> suggestions = predictions
-              .map<PlacePrediction>((p) => PlacePrediction(
-                    description: (p['description'] ?? '') as String,
-                    placeId: (p['place_id'] ?? '') as String,
-                  ))
-              .where((p) => p.description.isNotEmpty && p.placeId.isNotEmpty)
-              .toList();
+          final List predictions = data['predictions'] as List? ?? [];
+          final List<PlacePrediction> suggestions = predictions.map<PlacePrediction>((p) {
+            final Map<String, dynamic> item = p as Map<String, dynamic>;
+            return PlacePrediction(
+              description: item['description'] as String? ?? '',
+              placeId: item['place_id'] as String? ?? '',
+            );
+          }).where((p) => p.description.isNotEmpty && p.placeId.isNotEmpty).toList();
 
+          if (!mounted) return;
           setState(() {
             if (isFrom) {
               fromSuggestions = suggestions;
@@ -262,6 +293,7 @@ class _SearchScreenState extends State<SearchScreen> {
             }
           });
         } else if (status == 'ZERO_RESULTS') {
+          if (!mounted) return;
           setState(() {
             if (isFrom) {
               fromSuggestions = [];
@@ -274,10 +306,12 @@ class _SearchScreenState extends State<SearchScreen> {
         } else {
           debugPrint('Autocomplete API status: $status');
           if (status == 'REQUEST_DENIED') {
+            if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Places API request denied. Check API key & billing.')),
             );
           }
+          if (!mounted) return;
           setState(() {
             if (isFrom) {
               fromSuggestions = [];
@@ -290,6 +324,7 @@ class _SearchScreenState extends State<SearchScreen> {
         }
       } else {
         debugPrint('Autocomplete HTTP error: ${response.statusCode}');
+        if (!mounted) return;
         setState(() {
           if (isFrom) {
             fromSuggestions = [];
@@ -302,6 +337,7 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     } catch (e, st) {
       debugPrint('Autocomplete exception: $e\n$st');
+      if (!mounted) return;
       setState(() {
         if (isFrom) {
           fromSuggestions = [];
@@ -312,6 +348,7 @@ class _SearchScreenState extends State<SearchScreen> {
         }
       });
     } finally {
+      if (!mounted) return;
       setState(() {
         if (isFrom) {
           _isLoadingFrom = false;
@@ -328,7 +365,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     final String request = '$baseUrl'
         '?place_id=${Uri.encodeComponent(placeId)}'
-        '&fields=geometry,formatted_address'
+        '&fields=geometry,formatted_address,address_component,place_id'
         '&key=$googleApiKey'
         '&language=en'
         '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
@@ -337,27 +374,49 @@ class _SearchScreenState extends State<SearchScreen> {
       final response = await http.get(Uri.parse(request));
       debugPrint('PlaceDetails HTTP ${response.statusCode}: ${response.body}');
 
+      if (!mounted) return;
       if (response.statusCode == 200) {
-        final Map data = json.decode(response.body);
+        final Map<String, dynamic> data = json.decode(response.body) as Map<String, dynamic>;
         final String status = (data['status'] ?? '') as String;
 
         if (status == 'OK') {
-          final Map result = data['result'] ?? {};
-          final Map geometry = result['geometry'] ?? {};
-          final Map location = geometry['location'] ?? {};
+          final Map<String, dynamic> result = data['result'] as Map<String, dynamic>;
+          final Map<String, dynamic> geometry = result['geometry'] as Map<String, dynamic>? ?? {};
+          final Map<String, dynamic> location = geometry['location'] as Map<String, dynamic>? ?? {};
           final double? lat = (location['lat'] != null) ? (location['lat'] as num).toDouble() : null;
           final double? lng = (location['lng'] != null) ? (location['lng'] as num).toDouble() : null;
-          final String? formattedAddress = result['formatted_address'] as String?;
+          final String formattedAddress = result['formatted_address'] as String? ?? '';
+          final String returnedPlaceId = result['place_id'] as String? ?? '';
 
+          // address components -> extract locality/admin_area/postal_code
+          String? locality, adminArea, postalCode;
+          final List<dynamic> components = result['address_components'] as List<dynamic>? ?? [];
+          for (final c in components) {
+            final comp = c as Map<String, dynamic>;
+            final List types = comp['types'] as List? ?? [];
+            if (types.contains('locality')) locality = comp['long_name'] as String?;
+            if (types.contains('administrative_area_level_1') || types.contains('administrative_area_level_2')) {
+              adminArea ??= comp['long_name'] as String?;
+            }
+            if (types.contains('postal_code')) postalCode = comp['long_name'] as String?;
+          }
+
+          if (!mounted) return;
           setState(() {
             if (isFrom) {
-              if (formattedAddress != null && formattedAddress.isNotEmpty) fromController.text = formattedAddress;
+              if (formattedAddress.isNotEmpty) fromController.text = formattedAddress;
               if (lat != null && lng != null) fromLatLng = LatLngPair(lat, lng);
+              _fromPlaceId = returnedPlaceId;
+              _fromLocality = locality;
+              _fromAdminArea = adminArea;
               fromSuggestions = [];
               showFromSuggestions = false;
             } else {
-              if (formattedAddress != null && formattedAddress.isNotEmpty) toController.text = formattedAddress;
+              if (formattedAddress.isNotEmpty) toController.text = formattedAddress;
               if (lat != null && lng != null) toLatLng = LatLngPair(lat, lng);
+              _toPlaceId = returnedPlaceId;
+              _toLocality = locality;
+              _toAdminArea = adminArea;
               toSuggestions = [];
               showToSuggestions = false;
             }
@@ -368,10 +427,12 @@ class _SearchScreenState extends State<SearchScreen> {
         } else {
           debugPrint('Place Details API status: $status');
           if (status == 'REQUEST_DENIED') {
+            if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Place Details request denied. Check API key & billing.')),
             );
           }
+          if (!mounted) return;
           setState(() {
             if (isFrom) {
               fromSuggestions = [];
@@ -384,6 +445,7 @@ class _SearchScreenState extends State<SearchScreen> {
         }
       } else {
         debugPrint('Place Details HTTP error: ${response.statusCode}');
+        if (!mounted) return;
         setState(() {
           if (isFrom) {
             fromSuggestions = [];
@@ -396,6 +458,7 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     } catch (e, st) {
       debugPrint('Place Details exception: $e\n$st');
+      if (!mounted) return;
       setState(() {
         if (isFrom) {
           fromSuggestions = [];
@@ -419,7 +482,7 @@ class _SearchScreenState extends State<SearchScreen> {
     required Function(PlacePrediction) onTap,
   }) {
     if (!show || suggestions.isEmpty) return const SizedBox.shrink();
-    
+
     if (isLoading) {
       return Container(
         margin: const EdgeInsets.only(top: 8),
@@ -662,17 +725,20 @@ class RecentRideItem extends StatelessWidget {
       child: Row(children: [
         Icon(Icons.history, color: Colors.grey[600], size: screenWidth * 0.06),
         SizedBox(width: screenWidth * 0.03),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('From', style: GoogleFonts.lexend(fontSize: screenWidth * 0.03, color: Colors.grey[600])),
-          Text(ride.from, style: GoogleFonts.lexend(fontSize: screenWidth * 0.038, fontWeight: FontWeight.w500, color: Colors.black87)),
-        ]),
-        SizedBox(width: screenWidth * 0.04),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('From', style: GoogleFonts.lexend(fontSize: screenWidth * 0.03, color: Colors.grey[600])),
+            Text(ride.from, style: GoogleFonts.lexend(fontSize: screenWidth * 0.038, fontWeight: FontWeight.w500, color: Colors.black87)),
+          ]),
+        ),
         Icon(Icons.arrow_forward, color: Colors.grey[400], size: screenWidth * 0.05),
         SizedBox(width: screenWidth * 0.04),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('To', style: GoogleFonts.lexend(fontSize: screenWidth * 0.03, color: Colors.grey[600])),
-          Text(ride.to, style: GoogleFonts.lexend(fontSize: screenWidth * 0.038, fontWeight: FontWeight.w500, color: Colors.black87)),
-        ]),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('To', style: GoogleFonts.lexend(fontSize: screenWidth * 0.03, color: Colors.grey[600])),
+            Text(ride.to, style: GoogleFonts.lexend(fontSize: screenWidth * 0.038, fontWeight: FontWeight.w500, color: Colors.black87)),
+          ]),
+        ),
       ]),
     );
   }

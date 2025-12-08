@@ -1,7 +1,7 @@
 import 'ride_request.dart';
 
 class Ride {
-  final String id;
+  final String? id;
   final String date;
   final String startTime;
   final String endTime;
@@ -15,7 +15,7 @@ class Ride {
   final bool isLive;
 
   Ride({
-    required this.id,
+    this.id,
     required this.date,
     required this.startTime,
     required this.endTime,

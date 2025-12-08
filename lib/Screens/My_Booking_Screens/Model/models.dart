@@ -12,6 +12,12 @@ class Booking {
   final int passengerCount;
   final String status; // 'requested', 'accepted', 'rejected'
   final bool isCompleted;
+  final String description;
+  final String? passengerName;
+  final String? passengerAge;
+  final String? passengerPhone;
+
+  final List<Map<String, dynamic>> passengers;
 
   Booking({
     required this.id,
@@ -27,6 +33,11 @@ class Booking {
     required this.passengerCount,
     required this.status,
     this.isCompleted = false,
+    required this.description,
+    this.passengerName,
+    this.passengerAge,
+    this.passengerPhone,
+    this.passengers = const [],
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
@@ -44,6 +55,7 @@ class Booking {
       passengerCount: json['passengerCount'],
       status: json['status'],
       isCompleted: json['isCompleted'] ?? false,
+      description: json['description'] ?? '',
     );
   }
 
@@ -62,6 +74,7 @@ class Booking {
       'passengerCount': passengerCount,
       'status': status,
       'isCompleted': isCompleted,
+      
     };
   }
 
@@ -83,6 +96,7 @@ class Booking {
       passengerCount: passengerCount,
       status: status ?? this.status,
       isCompleted: isCompleted ?? this.isCompleted,
+      description: description,
     );
   }
 }

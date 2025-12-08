@@ -1,8 +1,10 @@
+import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:bookmycar/auth/login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -19,9 +21,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   // -------------------------
-  // 🔥 Firebase SignUp Method
+  // 🔥 Firebase Email/Password SignUp Method
   // -------------------------
   Future<void> registerUser() async {
     setState(() => _isLoading = true);
@@ -42,6 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         "name": _nameController.text.trim(),
         "email": _emailController.text.trim(),
         "createdAt": DateTime.now(),
+        "authProvider": "email",
       });
 
       // 3️⃣ Show success message
@@ -73,6 +77,89 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  // -------------------------
+  // 🔥 Google Sign-In (also used as Sign Up)
+  // -------------------------
+  Future<void> _signInWithGoogle() async {
+    try {
+      setState(() {
+        _isGoogleLoading = true;
+      });
+
+      // 1️⃣ Start Google sign-in flow
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        // User cancelled
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // 2️⃣ Create Firebase credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // 3️⃣ Sign into Firebase with Google credential
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      final User? user = userCredential.user;
+      if (user == null) {
+        throw Exception("Google sign-in failed: user is null");
+      }
+
+      // 4️⃣ Ensure user document exists in Firestore
+      final usersRef = FirebaseFirestore.instance.collection("users");
+      final userDoc = await usersRef.doc(user.uid).get();
+
+      if (!userDoc.exists) {
+        await usersRef.doc(user.uid).set({
+          "uid": user.uid,
+          "name": user.displayName ?? "",
+          "email": user.email ?? "",
+          "photoUrl": user.photoURL,
+          "authProvider": "google",
+          "createdAt": DateTime.now(),
+        });
+      }
+
+      // 5️⃣ Show success + navigate to SearchScreen (or home)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Logged in with Google successfully!",
+            style: GoogleFonts.lexend(),
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SearchScreen()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Google sign-in failed: $e",
+            style: GoogleFonts.lexend(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
     }
   }
 
@@ -332,7 +419,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ? Text(
                                   "Loading...",
                                   style: GoogleFonts.lexend(
-                                    color: const Color.fromARGB(255, 255, 255, 255),
+                                    color: const Color.fromARGB(
+                                        255, 255, 255, 255),
                                     fontWeight: FontWeight.bold,
                                     fontSize: height * 0.020,
                                   ),
@@ -350,6 +438,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                       SizedBox(height: height * 0.02),
 
+                      // Already have an account? Login (inside red card)
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -386,7 +475,93 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
             ),
 
+            // -------- BELOW RED CARD (white area) ----------
+
             SizedBox(height: height * 0.03),
+
+            Row(
+              children: [
+                Expanded(
+                  child: Divider(color: Colors.black54),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    "or sign in with",
+                    style: GoogleFonts.lexend(
+                      color: Colors.black87,
+                      fontSize: height * 0.016,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Divider(color: Colors.black54),
+                ),
+              ],
+            ),
+
+            SizedBox(height: height * 0.02),
+
+            // Google-branded "Sign in with Google" button (on white area)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: width * 0.15),
+              child: SizedBox(
+                width: double.infinity,
+                height: height * 0.055,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4285F4),
+                    padding: EdgeInsets.zero,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                  child: _isGoogleLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: height * 0.035,
+                              height: height * 0.035,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Image.asset(
+                                  'assets/images/google_logo.png',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: width * 0.03),
+                            Text(
+                              'Sign in with Google',
+                              style: GoogleFonts.lexend(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: height * 0.018,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+
+            SizedBox(height: height * 0.04),
 
             Text(
               "2025 @ Book My Car",
