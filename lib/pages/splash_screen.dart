@@ -1,7 +1,8 @@
-import 'package:bookmycar/auth/login_screen.dart';
-import 'package:flutter/material.dart';
 import 'dart:async';
-// import 'home_screen.dart'; // Replace with your next screen
+import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
+import 'package:bookmycar/auth/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -14,12 +15,29 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
+
+    // Show splash for 3 seconds, then decide where to go
+    Timer(const Duration(seconds: 3), _handleNavigation);
+  }
+
+  void _handleNavigation() {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (!mounted) return;
+
+    if (user == null) {
+      // 👉 Not logged in → go to LoginScreen
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()), // Replace as needed
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
-    });
+    } else {
+      // 👉 Already logged in → go to SearchScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SearchScreen()),
+      );
+    }
   }
 
   @override

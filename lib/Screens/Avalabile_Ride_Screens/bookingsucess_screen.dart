@@ -33,7 +33,23 @@ class BookingSucessScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: screenHeight * 0.25),
+                        // 🔹 Same top spacing as PublishsucessScreen
+                        SizedBox(height: screenHeight * 0.10),
+
+                        // ⭐ NEW: success animation (same as PublishsucessScreen)
+                        Center(
+                          child: SizedBox(
+                            height: screenHeight * 0.25,
+                            width: screenHeight * 0.25,
+                            child: Image.asset(
+                              'assets/Success.gif', // <-- same asset
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: screenHeight * 0.01),
+
                         Center(
                           child: Text(
                             'Booking Successful',

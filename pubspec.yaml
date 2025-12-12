@@ -42,11 +42,14 @@ dependencies:
   http: ^1.6.0
   google_sign_in: ^6.2.1
   intl: ^0.19.0
+  
  
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -54,6 +57,15 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/book_my_car_logo.png"   # YOUR LOGO PATH
+  # ANDROID adaptive icon
+  adaptive_icon_foreground: "assets/images/book_my_car_logo.png"
+  adaptive_icon_background: "#FFFFFF"  # or use an image instead
+  # adaptive_icon_background: "assets/icons/app_icon_background.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -68,6 +80,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+      - assets/
       - assets/images/
 
   #   - images/a_dot_burr.jpeg

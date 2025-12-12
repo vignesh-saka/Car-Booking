@@ -1171,134 +1171,107 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                               //     ),
                               //   ),
                               // ),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: isSubmitting
-                                      ? null
-                                      : () async {
-                                          if (_formKey.currentState!
-                                              .validate()) {
-                                            // if (profileImage == null) {
-                                            //   ScaffoldMessenger.of(
-                                            //     context,
-                                            //   ).showSnackBar(
-                                            //     const SnackBar(
-                                            //       content: Text(
-                                            //         "Please add a profile picture",
-                                            //       ),
-                                            //     ),
-                                            //   );
-                                            //   return;
-                                            // }
+                              Center(
+                                child: SizedBox(
+                                  width:
+                                      screenWidth *
+                                      0.6, // smaller width (60% of screen)
+                                  height:
+                                      screenHeight *
+                                      0.065, // smaller fixed height
+                                  child: ElevatedButton(
+                                    onPressed: isSubmitting
+                                        ? null
+                                        : () async {
+                                            if (_formKey.currentState!
+                                                .validate()) {
+                                              // if (profileImage == null) {
+                                              //   ScaffoldMessenger.of(
+                                              //     context,
+                                              //   ).showSnackBar(
+                                              //     const SnackBar(
+                                              //       content: Text(
+                                              //         "Please add a profile picture",
+                                              //       ),
+                                              //     ),
+                                              //   );
+                                              //   return;
+                                              // }
 
-                                            // NEW TIME VALIDATION ON SUBMIT (REMOVED AS REQUESTED)
-                                            /*
-                                            try {
-                                              final pickup =
-                                                  TimeOfDayExtension.parse(
-                                                    pickupTimeController.text
-                                                        .trim(),
-                                                  );
-                                              final drop =
-                                                  TimeOfDayExtension.parse(
-                                                    dropTimeController.text
-                                                        .trim(),
-                                                  );
+                                              // START SUBMIT ANIMATION
+                                              setState(() {
+                                                isSubmitting = true;
+                                              });
 
-                                              if (!drop.isAfter(pickup)) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      "Drop time must be after Pickup time",
-                                                    ),
-                                                  ),
-                                                );
-                                                return;
-                                              }
-                                            } catch (_) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    "Invalid time format",
-                                                  ),
-                                                ),
+                                              // Wait for your GIF animation time
+                                              await Future.delayed(
+                                                const Duration(seconds: 3),
                                               );
-                                              return;
+
+                                              // Show Published!
+                                              setState(() {
+                                                isPublished = true;
+                                              });
+
+                                              await Future.delayed(
+                                                const Duration(seconds: 1),
+                                              );
+
+                                              // SAVE RIDE
+                                              await saveRideToFirebase();
+
+                                              // Reset
+                                              setState(() {
+                                                isSubmitting = false;
+                                                isPublished = false;
+                                              });
                                             }
-                                            */
-
-                                            // START SUBMIT ANIMATION
-                                            setState(() {
-                                              isSubmitting = true;
-                                            });
-
-                                            // Wait for your GIF animation time
-                                            await Future.delayed(
-                                              const Duration(seconds: 3),
-                                            );
-
-                                            // Show Published!
-                                            setState(() {
-                                              isPublished = true;
-                                            });
-
-                                            await Future.delayed(
-                                              const Duration(seconds: 1),
-                                            );
-
-                                            // SAVE RIDE
-                                            await saveRideToFirebase();
-
-                                            // Reset
-                                            setState(() {
-                                              isSubmitting = false;
-                                              isPublished = false;
-                                            });
-                                          }
-                                        },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: screenHeight * 0.018,
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      padding: EdgeInsets
+                                          .zero, // important so height comes from SizedBox
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
                                     ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
+                                      child: isSubmitting
+                                          ? SizedBox.expand(
+                                              key: const ValueKey('loading'),
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(25),
+                                                child: Image.asset(
+                                                  "assets/car_loading.gif",
+                                                  fit: BoxFit
+                                                      .cover, // fills the small button
+                                                ),
+                                              ),
+                                            )
+                                          : isPublished
+                                          ? Text(
+                                              "Published!",
+                                              key: const ValueKey('published'),
+                                              style: GoogleFonts.lexend(
+                                                fontSize: screenWidth * 0.045,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.green,
+                                              ),
+                                            )
+                                          : Text(
+                                              "Submit",
+                                              key: const ValueKey('submit'),
+                                              style: GoogleFonts.lexend(
+                                                fontSize: screenWidth * 0.045,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFFFF4444),
+                                              ),
+                                            ),
                                     ),
-                                  ),
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 300),
-                                    child: isSubmitting
-                                        ? SizedBox(
-                                            key: const ValueKey('loading'),
-                                            height: screenHeight * 0.03,
-                                            child: Image.asset(
-                                              "assets/car_loading.gif",
-                                            ), // your GIF
-                                          )
-                                        : isPublished
-                                        ? Text(
-                                            "Published!",
-                                            key: const ValueKey('published'),
-                                            style: GoogleFonts.lexend(
-                                              fontSize: screenWidth * 0.045,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.green,
-                                            ),
-                                          )
-                                        : Text(
-                                            "Submit",
-                                            key: const ValueKey('submit'),
-                                            style: GoogleFonts.lexend(
-                                              fontSize: screenWidth * 0.045,
-                                              fontWeight: FontWeight.w600,
-                                              color: const Color(0xFFFF4444),
-                                            ),
-                                          ),
                                   ),
                                 ),
                               ),

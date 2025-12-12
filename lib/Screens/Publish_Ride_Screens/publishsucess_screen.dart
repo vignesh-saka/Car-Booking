@@ -33,7 +33,22 @@ class PublishsucessScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: screenHeight * 0.25),
+                        SizedBox(height: screenHeight * 0.10),
+
+                        // ⭐ NEW: success animation (GIF / PNG)
+                        Center(
+                          child: SizedBox(
+                            height: screenHeight * 0.25,
+                            width: screenHeight * 0.25,
+                            child: Image.asset(
+                              'assets/Success.gif', // <-- your success animation
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: screenHeight * 0.01),
+
                         Center(
                           child: Text(
                             'Ride Added Successfully',
