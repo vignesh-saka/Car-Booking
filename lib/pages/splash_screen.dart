@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             // App logo
             Image.asset(
-              'assets/images/book_my_car_logo.png', // your image path
+              'assets/images/car_splash.png', // your image path
               height: height * 0.35,
               width: width * 0.6,
               fit: BoxFit.contain,
