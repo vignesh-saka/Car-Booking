@@ -39,8 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (alreadySent) return;
 
     final String email = (data["email"] ?? user.email ?? "").toString().trim();
-    final String name =
-        (data["name"] ?? user.displayName ?? "there").toString().trim();
+    final String name = (data["name"] ?? user.displayName ?? "there")
+        .toString()
+        .trim();
 
     if (email.isEmpty) return;
 
@@ -48,15 +49,83 @@ class _LoginScreenState extends State<LoginScreen> {
     await FirebaseFirestore.instance.collection('mail').add({
       'to': email,
       'message': {
-        'subject': 'Welcome to Book My Car 🚗',
-        'text': 'Hi $name,\n\n'
-            'Your Book My Car account has been created and you have logged in successfully.\n\n'
-            'You can now publish rides, book rides and manage your trips easily.\n\n'
-            'Happy travelling!\nBook My Car Team',
-        'html': '<p>Hi $name,</p>'
-            '<p>Your <b>Book My Car</b> account has been created and you have logged in successfully.</p>'
-            '<p>You can now publish rides, book rides and manage your trips easily.</p>'
-            '<p>Happy travelling!<br/>Book My Car Team</p>',
+        'subject': '🎉 Congratulations! Welcome to Book My Car 🚗',
+
+        'text':
+            'Hi $name,\n\n'
+            '🎉 Congratulations!\n\n'
+            'Your Book My Car account has been created successfully.\n\n'
+            'You can now book rides, publish rides, and manage all your trips easily.\n\n'
+            '🚗 Let’s get moving!\n\n'
+            '— Book My Car Team',
+
+        'html':
+            '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to Book My Car</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f5f5f5; font-family:Arial, Helvetica, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px 0;">
+        <table width="600" cellpadding="0" cellspacing="0"
+          style="background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:#d32f2f; padding:20px;">
+              <h1 style="color:#ffffff; margin:0; font-size:28px;">🚗 Book My Car</h1>
+              <p style="color:#ffffff; margin:6px 0 0; font-size:14px;">
+                Book Car at Your Fingertips
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px; color:#333333;">
+              <h2 style="color:#d32f2f; margin-top:0;">
+                🎉 Congratulations, $name!
+              </h2>
+
+              <p>Your <b>Book My Car</b> account has been created successfully.</p>
+
+              <ul>
+                <li>🚘 Book rides easily</li>
+                <li>📍 Publish your own rides</li>
+                <li>🧾 Manage all your trips</li>
+              </ul>
+
+              <div style="text-align:center; margin:30px 0;">
+                <span style="background:#d32f2f; color:#ffffff; padding:12px 24px; border-radius:6px;">
+                  🚗 Let’s Get Moving
+                </span>
+              </div>
+
+              <p style="font-size:14px; color:#777;">
+                Happy travelling,<br/>
+                <b>Book My Car Team</b>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#fafafa; padding:15px; font-size:12px; color:#999;">
+              © ${DateTime.now().year} Book My Car
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''',
       },
     });
 
@@ -74,11 +143,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      UserCredential credential =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      UserCredential credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       final User? user = credential.user;
 
@@ -107,10 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: $e"),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -137,8 +203,8 @@ class _LoginScreenState extends State<LoginScreen> {
         idToken: googleAuth.idToken,
       );
 
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
 
       final User? user = userCredential.user;
       if (user == null) throw Exception("Google sign-in failed: user is null");
@@ -301,8 +367,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "Please enter your email";
-                          } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$')
-                              .hasMatch(value)) {
+                          } else if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
+                          ).hasMatch(value)) {
                             return "Enter a valid email";
                           }
                           return null;
@@ -497,8 +564,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 20,
                           child: const CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : Row(

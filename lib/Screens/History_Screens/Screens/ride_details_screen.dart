@@ -533,29 +533,29 @@ if (rawGroupSize is int) {
                       ),
 
                       // Edit button
-                      GestureDetector(
-                        onTap: () {
-                          // TODO: navigate edit
-                        },
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.edit,
-                              size: screenWidth * 0.045,
-                              color: Colors.blue,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Edit',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.035,
-                                color: Colors.blue,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // GestureDetector(
+                      //   onTap: () {
+                      //     // TODO: navigate edit
+                      //   },
+                      //   child: Row(
+                      //     children: [
+                      //       Icon(
+                      //         Icons.edit,
+                      //         size: screenWidth * 0.045,
+                      //         color: Colors.blue,
+                      //       ),
+                      //       const SizedBox(width: 6),
+                      //       Text(
+                      //         'Edit',
+                      //         style: GoogleFonts.lexend(
+                      //           fontSize: screenWidth * 0.035,
+                      //           color: Colors.blue,
+                      //           fontWeight: FontWeight.w500,
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
                     ],
                   ),
                   SizedBox(height: screenHeight * 0.015),
