@@ -47,6 +47,121 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
+  // --------------------------------------------------
+  // 📧 Send "Booking Requested" Email to Passenger
+  // --------------------------------------------------
+  Future<void> _sendBookingRequestedEmail({
+    required String fromCity,
+    required String toCity,
+    required String date,
+    required String departureTime,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    final data = userDoc.data() ?? {};
+    final String email = (data['email'] ?? user.email ?? '').toString().trim();
+    final String name = (data['name'] ?? user.displayName ?? 'there')
+        .toString()
+        .trim();
+
+    if (email.isEmpty) return;
+
+    await FirebaseFirestore.instance.collection('mail').add({
+      'to': email,
+      'message': {
+        'subject': '🚗 Ride Request Sent Successfully | Book My Car',
+
+        'text':
+            'Hi $name,\n\n'
+            '✅ Your ride request has been sent successfully.\n\n'
+            'Route: $fromCity → $toCity\n'
+            'Date: $date\n'
+            'Departure Time: $departureTime\n\n'
+            'Please wait for the rider’s response.\n\n'
+            '— Book My Car Team',
+
+        'html':
+            '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Ride Requested</title>
+</head>
+<body style="margin:0; padding:0; background:#f5f5f5; font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <table width="600" cellpadding="0" cellspacing="0"
+          style="background:#ffffff; border-radius:10px;
+          overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:#d32f2f; padding:20px;">
+              <h1 style="color:#ffffff; margin:0;">🚗 Book My Car</h1>
+              <p style="color:#ffffff; margin:6px 0 0;">
+                Ride Request Sent
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px; color:#333;">
+              <h2 style="color:#d32f2f;">✅ Request Submitted Successfully</h2>
+
+              <p>Hi <b>$name</b>,</p>
+
+              <p>Your ride request has been successfully sent with the following details:</p>
+
+              <table width="100%" style="margin-top:15px;">
+                <tr><td><b>From</b></td><td>$fromCity</td></tr>
+                <tr><td><b>To</b></td><td>$toCity</td></tr>
+                <tr><td><b>Date</b></td><td>$date</td></tr>
+                <tr><td><b>Pickup Time</b></td><td>$departureTime</td></tr>
+              </table>
+
+              <div style="margin:25px 0; text-align:center;">
+                <span style="background:#d32f2f; color:#fff;
+                padding:12px 24px; border-radius:6px;">
+                  ⏳ Waiting for Rider Response
+                </span>
+              </div>
+
+              <p style="font-size:14px; color:#777;">
+                You will be notified once the rider accepts or rejects your request.
+              </p>
+
+              <p>— <b>Book My Car Team</b></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#fafafa;
+            padding:15px; font-size:12px; color:#999;">
+              © ${DateTime.now().year} Book My Car
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''',
+      },
+    });
+  }
+
   void decrementPassengers() {
     if (numberOfPassengers > 1) {
       setState(() {
@@ -226,6 +341,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             .add(rideRequestDoc);
 
         debugPrint('Ride request created for booking ${docRef.id}');
+
+        // 📧 SEND EMAIL TO PASSENGER
+        _sendBookingRequestedEmail(
+          fromCity: widget.ride.fromCity,
+          toCity: widget.ride.toCity,
+          date: widget.ride.date,
+          departureTime: widget.ride.departureTime,
+        );
       } catch (e, st) {
         debugPrint('Failed to create ride_request: $e\n$st');
         // Not fatal – booking already exists.

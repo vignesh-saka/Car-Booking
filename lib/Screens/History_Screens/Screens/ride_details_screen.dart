@@ -19,7 +19,7 @@ class RideDetailsScreen extends StatefulWidget {
 class _RideDetailsScreenState extends State<RideDetailsScreen> {
   late List<RideRequest> requests;
   final Set<String> _seenPhones = {}; // to avoid duplicates
-  StreamSubscription<QuerySnapshot>? _requestsSub;   // <<< NEW
+  StreamSubscription<QuerySnapshot>? _requestsSub; // <<< NEW
 
   @override
   void initState() {
@@ -42,7 +42,9 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
   void _subscribeToRideRequests() {
     final rideId = widget.ride.id ?? '';
     if (rideId.isEmpty) {
-      debugPrint('RideDetailsScreen: rideId is empty — ride_requests query skipped');
+      debugPrint(
+        'RideDetailsScreen: rideId is empty — ride_requests query skipped',
+      );
       return;
     }
 
@@ -51,85 +53,237 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
         .where('rideId', isEqualTo: rideId)
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .listen((snapshot) {
-      final List<RideRequest> loaded = [];
+        .listen(
+          (snapshot) async {
+            final List<RideRequest> loaded = [];
 
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+            for (final doc in snapshot.docs) {
+              final data = doc.data() as Map<String, dynamic>;
 
-        final String name = (data['passengerName'] ?? '').toString().trim();
-        final String phone = (data['passengerPhone'] ?? '').toString().trim();
-        final String age = (data['passengerAge'] ?? '').toString().trim();
-        final String status = (data['status'] ?? 'pending').toString().trim();
+              final bool driverNotified = data['driverNotified'] == true;
 
+              final String name = (data['passengerName'] ?? '')
+                  .toString()
+                  .trim();
+              final String phone = (data['passengerPhone'] ?? '')
+                  .toString()
+                  .trim();
+              final String age = (data['passengerAge'] ?? '').toString().trim();
+              final String status = (data['status'] ?? 'pending')
+                  .toString()
+                  .trim();
 
-        // 👇 NEW
-final dynamic rawGroupSize = data['groupSize'];
-int groupSize = 1;
-if (rawGroupSize is int) {
-  groupSize = rawGroupSize;
-} else if (rawGroupSize != null) {
-  groupSize = int.tryParse(rawGroupSize.toString()) ?? 1;
-}
+              // 👇 NEW
+              final dynamic rawGroupSize = data['groupSize'];
+              int groupSize = 1;
+              if (rawGroupSize is int) {
+                groupSize = rawGroupSize;
+              } else if (rawGroupSize != null) {
+                groupSize = int.tryParse(rawGroupSize.toString()) ?? 1;
+              }
 
- // 👇 bookingId
-  final String bookingId = (data['bookingId'] ?? '').toString().trim();
+              // 📧 SEND EMAIL ONLY ONCE
+              if (!driverNotified) {
+                await _sendNewRideRequestEmail(
+                  passengerName: name,
+                  passengerPhone: phone,
+                  groupSize: groupSize,
+                );
 
-        // Use phone as unique key if present
-        final String uniqueKey = phone.isNotEmpty ? phone : '$name|$age';
+                // Mark as notified
+                await doc.reference.update({
+                  'driverNotified': true,
+                  'driverNotifiedAt': FieldValue.serverTimestamp(),
+                });
+              }
 
-        if (_seenPhones.contains(uniqueKey)) {
-          // already in list (from initial model) – you could update status
-          // but simplest is: ignore duplicates here
-          continue;
-        }
+              // 👇 bookingId
+              final String bookingId = (data['bookingId'] ?? '')
+                  .toString()
+                  .trim();
 
-        _seenPhones.add(uniqueKey);
+              // Use phone as unique key if present
+              final String uniqueKey = phone.isNotEmpty ? phone : '$name|$age';
 
-        loaded.add(
-          RideRequest(
-            name: name.isNotEmpty ? name : 'Passenger',
-            phone: phone,
-            age: age.isNotEmpty ? age : null,
-            status: status.isNotEmpty ? status : 'pending',
-            groupSize: groupSize,
-            bookingId: bookingId.isNotEmpty ? bookingId : null,
-            
-            
-          ),
+              if (_seenPhones.contains(uniqueKey)) {
+                // already in list (from initial model) – you could update status
+                // but simplest is: ignore duplicates here
+                continue;
+              }
+
+              _seenPhones.add(uniqueKey);
+
+              loaded.add(
+                RideRequest(
+                  name: name.isNotEmpty ? name : 'Passenger',
+                  phone: phone,
+                  age: age.isNotEmpty ? age : null,
+                  status: status.isNotEmpty ? status : 'pending',
+                  groupSize: groupSize,
+                  bookingId: bookingId.isNotEmpty ? bookingId : null,
+                ),
+              );
+            }
+
+            if (mounted) {
+              setState(() {
+                // If you want ONLY Firestore requests, replace the list:
+                // requests = loaded;
+
+                // If you want to keep pre-existing ones + new ones:
+                // First clear only auto-loaded ones; but easiest:
+                requests.addAll(loaded);
+              });
+            }
+          },
+          onError: (err) {
+            debugPrint('ride_requests subscription error: $err');
+          },
         );
-      }
+  }
 
-      if (mounted) {
-        setState(() {
-          // If you want ONLY Firestore requests, replace the list:
-          // requests = loaded;
+  // --------------------------------------------------
+  // 📧 Send email to rider when a new ride request arrives
+  // --------------------------------------------------
+  Future<void> _sendNewRideRequestEmail({
+    required String passengerName,
+    required String passengerPhone,
+    required int groupSize,
+  }) async {
+    final driver = FirebaseAuth.instance.currentUser;
+    if (driver == null) return;
 
-          // If you want to keep pre-existing ones + new ones:
-          // First clear only auto-loaded ones; but easiest:
-          requests.addAll(loaded);
-        });
-      }
-    }, onError: (err) {
-      debugPrint('ride_requests subscription error: $err');
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(driver.uid)
+        .get();
+
+    final data = userDoc.data() ?? {};
+    final String email = (data['email'] ?? driver.email ?? '')
+        .toString()
+        .trim();
+    final String name = (data['name'] ?? driver.displayName ?? 'there')
+        .toString()
+        .trim();
+
+    if (email.isEmpty) return;
+
+    await FirebaseFirestore.instance.collection('mail').add({
+      'to': email,
+      'message': {
+        'subject': '🚘 New Ride Request Received | Book My Car',
+
+        'text':
+            'Hi $name,\n\n'
+            'You have received a new ride request.\n\n'
+            'Passenger: $passengerName\n'
+            'Phone: $passengerPhone\n'
+            'Passengers: $groupSize\n\n'
+            'Please open the app to accept or reject the request.\n\n'
+            '— Book My Car Team',
+
+        'html':
+            '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>New Ride Request</title>
+</head>
+<body style="margin:0; padding:0; background:#f5f5f5; font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <table width="600" cellpadding="0" cellspacing="0"
+          style="background:#ffffff; border-radius:10px;
+          overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:#d32f2f; padding:20px;">
+              <h1 style="color:#ffffff; margin:0;">🚗 Book My Car</h1>
+              <p style="color:#ffffff; margin:6px 0 0;">
+                New Ride Request
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px; color:#333;">
+              <h2 style="color:#d32f2f;">📩 New Request Received</h2>
+
+              <p>Hi <b>$name</b>,</p>
+
+              <p>You have received a new request for your ride:</p>
+
+              <table width="100%" style="margin-top:15px;">
+                <tr><td><b>Passenger</b></td><td>$passengerName</td></tr>
+                <tr><td><b>Phone</b></td><td>$passengerPhone</td></tr>
+                <tr><td><b>No. of Passengers</b></td><td>$groupSize</td></tr>
+              </table>
+
+              <div style="margin:25px 0; text-align:center;">
+                <span style="background:#d32f2f; color:#fff;
+                padding:12px 24px; border-radius:6px;">
+                  Open App to Respond
+                </span>
+              </div>
+
+              <p style="font-size:14px; color:#777;">
+                Please accept or reject the request from the Ride Details screen.
+              </p>
+
+              <p>— <b>Book My Car Team</b></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#fafafa;
+            padding:15px; font-size:12px; color:#999;">
+              © ${DateTime.now().year} Book My Car
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''',
+      },
     });
   }
 
   @override
   void dispose() {
-    _requestsSub?.cancel();   // <<< NEW
+    _requestsSub?.cancel(); // <<< NEW
     super.dispose();
   }
 
+  //   Future<void> markRideAsCompleted() async {
+  //   final String rideId = widget.ride.id ?? '';
+  //   if (rideId.isEmpty) return;
+
+  //   await FirebaseFirestore.instance
+  //       .collection('rides')
+  //       .doc(rideId)
+  //       .update({
+  //     'status': 'completed',
+  //     'completedAt': FieldValue.serverTimestamp(),
+  //   });
+  // }
+
   // -------------------- Accept / Reject with Firestore update --------------------
   Future<void> _upsertRideRequestToFirestore(
-      RideRequest req, String newStatus) async {
+    RideRequest req,
+    String newStatus,
+  ) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw FirebaseException(
-        plugin: 'auth',
-        message: 'Not authenticated',
-      );
+      throw FirebaseException(plugin: 'auth', message: 'Not authenticated');
     }
 
     final coll = FirebaseFirestore.instance.collection('ride_requests');
@@ -149,7 +303,8 @@ if (rawGroupSize is int) {
     if (snapshot.docs.isEmpty) {
       // According to your rules, driver MUST NOT create ride_requests.
       debugPrint(
-          'No ride_request found to update for rideId=$rideId phone=${req.phone}');
+        'No ride_request found to update for rideId=$rideId phone=${req.phone}',
+      );
       return;
     }
 
@@ -164,7 +319,9 @@ if (rawGroupSize is int) {
 
   /// Sync driver decision to the `bookings` collection so passenger UI updates.
   Future<void> _updateBookingStatusForPassenger(
-      RideRequest req, String newStatus) async {
+    RideRequest req,
+    String newStatus,
+  ) async {
     try {
       final String rideId = widget.ride.id ?? '';
       if (rideId.isEmpty) return;
@@ -214,8 +371,7 @@ if (rawGroupSize is int) {
         phone: requests[index].phone,
         status: 'accepted',
         age: requests[index].age,
-        groupSize: requests[index].groupSize, 
-        
+        groupSize: requests[index].groupSize,
       );
     });
 
@@ -227,8 +383,7 @@ if (rawGroupSize is int) {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('Request accepted', style: GoogleFonts.lexend()),
+          content: Text('Request accepted', style: GoogleFonts.lexend()),
           backgroundColor: Colors.green,
         ),
       );
@@ -243,8 +398,10 @@ if (rawGroupSize is int) {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to accept request. Try again.',
-              style: GoogleFonts.lexend()),
+          content: Text(
+            'Failed to accept request. Try again.',
+            style: GoogleFonts.lexend(),
+          ),
           backgroundColor: const Color(0xFFFF3B30),
         ),
       );
@@ -270,8 +427,7 @@ if (rawGroupSize is int) {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('Request rejected', style: GoogleFonts.lexend()),
+          content: Text('Request rejected', style: GoogleFonts.lexend()),
           backgroundColor: Colors.red,
         ),
       );
@@ -286,8 +442,10 @@ if (rawGroupSize is int) {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to reject request. Try again.',
-              style: GoogleFonts.lexend()),
+          content: Text(
+            'Failed to reject request. Try again.',
+            style: GoogleFonts.lexend(),
+          ),
           backgroundColor: const Color(0xFFFF3B30),
         ),
       );
@@ -303,8 +461,7 @@ if (rawGroupSize is int) {
     if (trimmed.isEmpty) return {'city': '', 'rest': ''};
     final parts = trimmed.split(',');
     final city = parts[0].trim();
-    final rest =
-        parts.length > 1 ? parts.sublist(1).join(',').trim() : '';
+    final rest = parts.length > 1 ? parts.sublist(1).join(',').trim() : '';
     return {'city': city, 'rest': rest};
   }
 
@@ -357,323 +514,325 @@ if (rawGroupSize is int) {
       body: SafeArea(
         child: Column(
           children: [
-  // Red header bar
-  Container(
-    width: double.infinity,
-    padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFF3B30), Color(0xFFFF3B30)],
-      ),
-    ),
-    child: Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-        ),
-        Expanded(
-          child: Text(
-            'Ride Details',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.lexend(
-              fontSize: screenWidth * 0.055,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        SizedBox(width: screenWidth * 0.12),
-      ],
-    ),
-  ),
-
-  // Content container with red background (rounded bottom)
-  Expanded(
-    child: SingleChildScrollView(
-      child: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          color: Color(0xFFFF3B30),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(25),
-            bottomRight: Radius.circular(25),
-          ),
-        ),
-        padding: EdgeInsets.all(screenWidth * 0.04),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Ride info card
+            // Red header bar
             Container(
-              padding: EdgeInsets.all(screenWidth * 0.04),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFFFF3B30), Color(0xFFFF3B30)],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  // date
-                  Text(
-                    widget.ride.date,
-                    style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.038,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.orange,
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Ride Details',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.lexend(
+                        fontSize: screenWidth * 0.055,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  SizedBox(height: screenHeight * 0.015),
-
-                  // Start time & from (left) | price (right)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left group: time + from-address column (flexible)
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Start time
-                            Text(
-                              widget.ride.startTime,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.035,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-
-                            // Location icon + address column (Flexible)
-                            Flexible(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: screenWidth * 0.04,
-                                    color: Colors.black54,
-                                  ),
-                                  SizedBox(width: screenWidth * 0.01),
-
-                                  // Address columns (city above, rest below)
-                                  Flexible(
-                                    child: _buildAddressColumn(
-                                      widget.ride.from,
-                                      screenWidth,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Right: price
-                      SizedBox(width: screenWidth * 0.02),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Rs: ${widget.ride.price}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.035,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFFF4444),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: screenHeight * 0.008),
-
-                  // End time & to (left) | Edit (right)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // End time
-                            Text(
-                              widget.ride.endTime,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.035,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Icon(
-                              Icons.location_on,
-                              size: screenWidth * 0.04,
-                              color: Colors.black54,
-                            ),
-                            SizedBox(width: screenWidth * 0.01),
-
-                            // To-address column
-                            Flexible(
-                              child: _buildAddressColumn(
-                                widget.ride.to,
-                                screenWidth,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Edit button
-                      // GestureDetector(
-                      //   onTap: () {
-                      //     // TODO: navigate edit
-                      //   },
-                      //   child: Row(
-                      //     children: [
-                      //       Icon(
-                      //         Icons.edit,
-                      //         size: screenWidth * 0.045,
-                      //         color: Colors.blue,
-                      //       ),
-                      //       const SizedBox(width: 6),
-                      //       Text(
-                      //         'Edit',
-                      //         style: GoogleFonts.lexend(
-                      //           fontSize: screenWidth * 0.035,
-                      //           color: Colors.blue,
-                      //           fontWeight: FontWeight.w500,
-                      //         ),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
-                    ],
-                  ),
-                  SizedBox(height: screenHeight * 0.015),
-
-                  // Driver info
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: screenWidth * 0.05,
-                        backgroundColor: Colors.grey[300],
-                        child: Icon(
-                          Icons.person,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      SizedBox(width: screenWidth * 0.03),
-
-                      // Make driver info flexible to avoid overflow on small screens
-                      Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.ride.driverName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.038,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              widget.ride.driverPhone,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.032,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: screenHeight * 0.015),
-
-                  // Requests header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'All Requests',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.038,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      Text(
-                        'No. of Passengers: ${widget.ride.totalPassengers}',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.032,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: screenHeight * 0.012),
-
-                  // Requests list or placeholder
-                  if (requests.isEmpty)
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.02,
-                      ),
-                      child: Center(
-                        child: Text(
-                          'No Pending Requests',
-                          style: GoogleFonts.lexend(
-                            fontSize: screenWidth * 0.035,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    ListView.builder(
-                      itemCount: requests.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        final request = requests[index];
-                        return RequestItem(
-                          request: request,
-                          index: index,
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onAccept: handleAccept,
-                          onReject: handleReject,
-                        );
-                      },
-                    ),
+                  SizedBox(width: screenWidth * 0.12),
                 ],
               ),
             ),
 
-            SizedBox(height: screenHeight * 0.02),
+            // Content container with red background (rounded bottom)
+            Expanded(
+              child: SingleChildScrollView(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B30),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(25),
+                      bottomRight: Radius.circular(25),
+                    ),
+                  ),
+                  padding: EdgeInsets.all(screenWidth * 0.04),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Ride info card
+                      Container(
+                        padding: EdgeInsets.all(screenWidth * 0.04),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // date
+                            Text(
+                              widget.ride.date,
+                              style: GoogleFonts.lexend(
+                                fontSize: screenWidth * 0.038,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.orange,
+                              ),
+                            ),
+                            SizedBox(height: screenHeight * 0.015),
+
+                            // Start time & from (left) | price (right)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Left group: time + from-address column (flexible)
+                                Expanded(
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Start time
+                                      Text(
+                                        widget.ride.startTime,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.035,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      SizedBox(width: screenWidth * 0.02),
+
+                                      // Location icon + address column (Flexible)
+                                      Flexible(
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(
+                                              Icons.location_on,
+                                              size: screenWidth * 0.04,
+                                              color: Colors.black54,
+                                            ),
+                                            SizedBox(width: screenWidth * 0.01),
+
+                                            // Address columns (city above, rest below)
+                                            Flexible(
+                                              child: _buildAddressColumn(
+                                                widget.ride.from,
+                                                screenWidth,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Right: price
+                                SizedBox(width: screenWidth * 0.02),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      'Rs: ${widget.ride.price}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.lexend(
+                                        fontSize: screenWidth * 0.035,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFFFF4444),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: screenHeight * 0.008),
+
+                            // End time & to (left) | Edit (right)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // End time
+                                      Text(
+                                        widget.ride.endTime,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.035,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      SizedBox(width: screenWidth * 0.02),
+                                      Icon(
+                                        Icons.location_on,
+                                        size: screenWidth * 0.04,
+                                        color: Colors.black54,
+                                      ),
+                                      SizedBox(width: screenWidth * 0.01),
+
+                                      // To-address column
+                                      Flexible(
+                                        child: _buildAddressColumn(
+                                          widget.ride.to,
+                                          screenWidth,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Edit button
+                                // GestureDetector(
+                                //   onTap: () {
+                                //     // TODO: navigate edit
+                                //   },
+                                //   child: Row(
+                                //     children: [
+                                //       Icon(
+                                //         Icons.edit,
+                                //         size: screenWidth * 0.045,
+                                //         color: Colors.blue,
+                                //       ),
+                                //       const SizedBox(width: 6),
+                                //       Text(
+                                //         'Edit',
+                                //         style: GoogleFonts.lexend(
+                                //           fontSize: screenWidth * 0.035,
+                                //           color: Colors.blue,
+                                //           fontWeight: FontWeight.w500,
+                                //         ),
+                                //       ),
+                                //     ],
+                                //   ),
+                                // ),
+                              ],
+                            ),
+                            SizedBox(height: screenHeight * 0.015),
+
+                            // Driver info
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: screenWidth * 0.05,
+                                  backgroundColor: Colors.grey[300],
+                                  child: Icon(
+                                    Icons.person,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                SizedBox(width: screenWidth * 0.03),
+
+                                // Make driver info flexible to avoid overflow on small screens
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.ride.driverName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.038,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Text(
+                                        widget.ride.driverPhone,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.lexend(
+                                          fontSize: screenWidth * 0.032,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: screenHeight * 0.015),
+
+                            // Requests header
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'All Requests',
+                                  style: GoogleFonts.lexend(
+                                    fontSize: screenWidth * 0.038,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                                Text(
+                                  'No. of Passengers: ${widget.ride.totalPassengers}',
+                                  style: GoogleFonts.lexend(
+                                    fontSize: screenWidth * 0.032,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: screenHeight * 0.012),
+
+                            // Requests list or placeholder
+                            if (requests.isEmpty)
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: screenHeight * 0.02,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'No Pending Requests',
+                                    style: GoogleFonts.lexend(
+                                      fontSize: screenWidth * 0.035,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              ListView.builder(
+                                itemCount: requests.length,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemBuilder: (context, index) {
+                                  final request = requests[index];
+                                  return RequestItem(
+                                    request: request,
+                                    index: index,
+                                    screenWidth: screenWidth,
+                                    screenHeight: screenHeight,
+                                    onAccept: handleAccept,
+                                    onReject: handleReject,
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(height: screenHeight * 0.02),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
-      ),
-    ),
-  ),
-]
-
-),
       ),
     );
   }
 }
- 

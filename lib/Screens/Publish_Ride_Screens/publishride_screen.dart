@@ -105,6 +105,119 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
   }
   */
 
+  // --------------------------------------------------
+  // 📧 Send "Ride Published Successfully" Email
+  // --------------------------------------------------
+  Future<void> _sendRidePublishedEmail({
+    required String from,
+    required String to,
+    required String date,
+    required String pickupTime,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    final data = userDoc.data() ?? {};
+    final String email = (data["email"] ?? user.email ?? "").toString().trim();
+    final String name = (data["name"] ?? user.displayName ?? "there")
+        .toString()
+        .trim();
+
+    if (email.isEmpty) return;
+
+    await FirebaseFirestore.instance.collection("mail").add({
+      "to": email,
+      "message": {
+        "subject": "🚗 Your Ride is Published Successfully | Book My Car",
+
+        "text":
+            "Hi $name,\n\n"
+            "🎉 Your ride has been published successfully!\n\n"
+            "Route: $from → $to\n"
+            "Date: $date\n"
+            "Pickup Time: $pickupTime\n\n"
+            "Passengers can now book your ride.\n\n"
+            "— Book My Car Team",
+
+        "html":
+            '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Ride Published</title>
+</head>
+<body style="margin:0; padding:0; background:#f5f5f5; font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <table width="600" cellpadding="0" cellspacing="0"
+          style="background:#ffffff; border-radius:10px; overflow:hidden;
+          box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:#d32f2f; padding:20px;">
+              <h1 style="color:#ffffff; margin:0;">🚗 Book My Car</h1>
+              <p style="color:#ffffff; margin:6px 0 0;">Ride Published</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px; color:#333;">
+              <h2 style="color:#d32f2f;">🎉 Ride Published Successfully!</h2>
+
+              <p>Hi <b>$name</b>,</p>
+
+              <p>Your ride has been successfully published with the following details:</p>
+
+              <table width="100%" style="margin-top:15px;">
+                <tr><td><b>From:</b></td><td>$from</td></tr>
+                <tr><td><b>To:</b></td><td>$to</td></tr>
+                <tr><td><b>Date:</b></td><td>$date</td></tr>
+                <tr><td><b>Pickup Time:</b></td><td>$pickupTime</td></tr>
+              </table>
+
+              <div style="margin:25px 0; text-align:center;">
+                <span style="background:#d32f2f; color:#fff;
+                padding:12px 24px; border-radius:6px;">
+                  🚘 Ride is Live
+                </span>
+              </div>
+
+              <p style="font-size:14px; color:#777;">
+                Passengers can now view and book your ride.
+              </p>
+
+              <p>— <b>Book My Car Team</b></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#fafafa;
+            padding:15px; font-size:12px; color:#999;">
+              © ${DateTime.now().year} Book My Car
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''',
+      },
+    });
+  }
+
   void incrementPassengers() => setState(() => passengers++);
   void decrementPassengers() {
     if (passengers > 1) setState(() => passengers--);
@@ -250,6 +363,14 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
         "createdAt": Timestamp.now(),
         "createdBy": FirebaseAuth.instance.currentUser!.uid,
       });
+
+      // 📧 SEND EMAIL (non-blocking)
+      _sendRidePublishedEmail(
+        from: fromCityController.text.trim(),
+        to: toCityController.text.trim(),
+        date: dateController.text.trim(),
+        pickupTime: pickupTimeController.text.trim(),
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Ride Published Successfully!")),

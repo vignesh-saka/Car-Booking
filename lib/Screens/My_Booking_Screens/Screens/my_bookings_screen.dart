@@ -21,21 +21,214 @@ class MyBookingsScreen extends StatefulWidget {
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
 }
 
+final Set<String> _processedBookingIds = {};
+StreamSubscription<QuerySnapshot>? _bookingSub;
+
 class _MyBookingsScreenState extends State<MyBookingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int selectedIndex = 1; // My Bookings tab selected
 
+  void _listenForBookingStatusChanges(String uid) {
+    _bookingSub?.cancel();
+
+    _bookingSub = FirebaseFirestore.instance
+        .collection('bookings')
+        .where('userId', isEqualTo: uid)
+        .snapshots()
+        .listen((snapshot) {
+          for (final doc in snapshot.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final bookingId = doc.id;
+
+            // Prevent re-processing same booking in this session
+            if (_processedBookingIds.contains(bookingId)) continue;
+
+            final status = (data['status'] ?? '').toString().toLowerCase();
+            final bool acceptEmailSent = data['acceptEmailSent'] == true;
+            final bool rejectEmailSent = data['rejectEmailSent'] == true;
+
+            final booking = _bookingFromDoc(doc);
+
+            if (status == 'accepted' && !acceptEmailSent) {
+              _processedBookingIds.add(bookingId);
+
+              Future.microtask(() async {
+                await _sendBookingAcceptedEmail(booking);
+                await doc.reference.update({
+                  'acceptEmailSent': true,
+                  'acceptEmailSentAt': FieldValue.serverTimestamp(),
+                });
+              });
+            }
+
+            if (status == 'rejected' && !rejectEmailSent) {
+              _processedBookingIds.add(bookingId);
+
+              Future.microtask(() async {
+                await _sendBookingRejectedEmail(booking);
+                await doc.reference.update({
+                  'rejectEmailSent': true,
+                  'rejectEmailSentAt': FieldValue.serverTimestamp(),
+                });
+              });
+            }
+          }
+        });
+  }
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _listenForBookingStatusChanges(uid);
+    }
   }
 
   @override
   void dispose() {
+    _bookingSub?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendBookingAcceptedEmail(Booking booking) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    final data = userDoc.data() ?? {};
+    final String email = (data['email'] ?? user.email ?? '').toString().trim();
+    final String name = (data['name'] ?? user.displayName ?? 'there')
+        .toString()
+        .trim();
+
+    if (email.isEmpty) return;
+
+    await FirebaseFirestore.instance.collection('mail').add({
+      'to': email,
+      'message': {
+        'subject': '✅ Ride Request Accepted | Book My Car',
+
+        'html':
+            '''
+<!DOCTYPE html>
+<html>
+<body style="background:#f5f5f5; font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <table width="600" style="background:#fff; border-radius:10px; overflow:hidden;">
+          <tr>
+            <td style="background:#d32f2f; padding:20px; color:#fff; text-align:center;">
+              <h1>🚗 Book My Car</h1>
+              <p>Ride Accepted</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px;">
+              <h2 style="color:#d32f2f;">🎉 Request Accepted!</h2>
+              <p>Hi <b>$name</b>,</p>
+              <p>Your ride request has been <b>successfully accepted</b>.</p>
+
+              <table width="100%" style="margin-top:15px;">
+                <tr><td><b>From:</b></td><td>${booking.from}</td></tr>
+                <tr><td><b>To:</b></td><td>${booking.to}</td></tr>
+                <tr><td><b>Date:</b></td><td>${booking.date}</td></tr>
+                <tr><td><b>Start Time:</b></td><td>${booking.startTime}</td></tr>
+              </table>
+
+              <p style="margin-top:20px;">
+                You can now proceed with your travel.
+              </p>
+
+              <p>— <b>Book My Car Team</b></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''',
+      },
+    });
+  }
+
+  Future<void> _sendBookingRejectedEmail(Booking booking) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    final data = userDoc.data() ?? {};
+    final String email = (data['email'] ?? user.email ?? '').toString().trim();
+    final String name = (data['name'] ?? user.displayName ?? 'there')
+        .toString()
+        .trim();
+
+    if (email.isEmpty) return;
+
+    await FirebaseFirestore.instance.collection('mail').add({
+      'to': email,
+      'message': {
+        'subject': '❌ Ride Request Rejected | Book My Car',
+
+        'html':
+            '''
+<!DOCTYPE html>
+<html>
+<body style="background:#f5f5f5; font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <table width="600" style="background:#fff; border-radius:10px; overflow:hidden;">
+          <tr>
+            <td style="background:#d32f2f; padding:20px; color:#fff; text-align:center;">
+              <h1>🚗 Book My Car</h1>
+              <p>Ride Request Update</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px;">
+              <h2 style="color:#d32f2f;">😔 Request Rejected</h2>
+              <p>Hi <b>$name</b>,</p>
+              <p>
+                Unfortunately, your ride request has been <b>rejected</b>.
+              </p>
+
+              <table width="100%" style="margin-top:15px;">
+                <tr><td><b>From:</b></td><td>${booking.from}</td></tr>
+                <tr><td><b>To:</b></td><td>${booking.to}</td></tr>
+                <tr><td><b>Date:</b></td><td>${booking.date}</td></tr>
+              </table>
+
+              <p style="margin-top:20px;">
+                You may try booking another available ride.
+              </p>
+
+              <p>— <b>Book My Car Team</b></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''',
+      },
+    });
   }
 
   void onNavItemTapped(int index) {
@@ -161,91 +354,92 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     final Map<String, dynamic> data =
         (doc.data() as Map<String, dynamic>?) ?? {};
 
-    final rideId = data['rideId']?.toString() ??
+    final rideId =
+        data['rideId']?.toString() ??
         data['ride_id']?.toString() ??
         data['ride']?['id']?.toString() ??
         doc.id;
 
-    final date = data['date']?.toString() ??
+    final date =
+        data['date']?.toString() ??
         (data['ride'] is Map ? (data['ride']['date']?.toString() ?? '') : '');
 
-    final startTime = data['startTime']?.toString() ??
+    final startTime =
+        data['startTime']?.toString() ??
         data['pickupTime']?.toString() ??
         (data['ride'] is Map
             ? (data['ride']['departureTime']?.toString() ?? '')
             : '');
 
-    final endTime = data['endTime']?.toString() ??
+    final endTime =
+        data['endTime']?.toString() ??
         data['dropTime']?.toString() ??
         (data['ride'] is Map
             ? (data['ride']['arrivalTime']?.toString() ?? '')
             : '');
 
-    final from = data['from']?.toString() ??
+    final from =
+        data['from']?.toString() ??
         data['ride.fromCity']?.toString() ??
         (data['ride'] is Map
             ? (data['ride']['fromCity']?.toString() ?? '')
             : '');
 
-    final to = data['to']?.toString() ??
+    final to =
+        data['to']?.toString() ??
         data['ride.toCity']?.toString() ??
-        (data['ride'] is Map
-            ? (data['ride']['toCity']?.toString() ?? '')
-            : '');
+        (data['ride'] is Map ? (data['ride']['toCity']?.toString() ?? '') : '');
 
-    final driverName = data['driverName']?.toString() ??
+    final driverName =
+        data['driverName']?.toString() ??
         data['riderName']?.toString() ??
         (data['ride'] is Map
             ? (data['ride']['driverName']?.toString() ??
-                data['ride']['riderName']?.toString() ??
-                '')
+                  data['ride']['riderName']?.toString() ??
+                  '')
             : '');
 
-    final driverPhone = data['driverPhone']?.toString() ??
+    final driverPhone =
+        data['driverPhone']?.toString() ??
         data['phone']?.toString() ??
         (data['ride'] is Map
             ? (data['ride']['driverPhone']?.toString() ??
-                data['ride']['phoneNumber']?.toString() ??
-                '')
+                  data['ride']['phoneNumber']?.toString() ??
+                  '')
             : '');
 
-    final price = data['price']?.toString() ??
-        (data['ride'] is Map
-            ? (data['ride']['price']?.toString() ?? '')
-            : '');
+    final price =
+        data['price']?.toString() ??
+        (data['ride'] is Map ? (data['ride']['price']?.toString() ?? '') : '');
 
     // 👇 NEW: primary passenger details (we stored them in bookingDoc)
     final String? passengerName = data['passengerName']?.toString();
     final String? passengerAge = data['passengerAge']?.toString();
     final String? passengerPhone = data['passengerPhone']?.toString();
 
+    // 👇 NEW: parse passengers array
+    List<Map<String, dynamic>> passengers = [];
+    if (data['passengers'] is List) {
+      passengers = (data['passengers'] as List)
+          .where((e) => e is Map)
+          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    }
 
-      // 👇 NEW: parse passengers array
-  List<Map<String, dynamic>> passengers = [];
-  if (data['passengers'] is List) {
-    passengers = (data['passengers'] as List)
-        .where((e) => e is Map)
-        .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
-  }
+    // if Firestore has no passengers array, fall back to single passenger fields
+    if (passengers.isEmpty && passengerName != null) {
+      passengers = [
+        {'name': passengerName, 'age': passengerAge, 'phone': passengerPhone},
+      ];
+    }
 
-  // if Firestore has no passengers array, fall back to single passenger fields
-  if (passengers.isEmpty && passengerName != null) {
-    passengers = [
-      {
-        'name': passengerName,
-        'age': passengerAge,
-        'phone': passengerPhone,
-      }
-    ];
-  }
-
-  // 👇 your passengerCount logic (you likely already have something)
-  int passengerCount = passengers.isNotEmpty
-      ? passengers.length
-      : (data['groupSize'] is int
-          ? data['groupSize'] as int
-          : (int.tryParse((data['passengerCount'] ?? '0').toString()) ?? 0));
+    // 👇 your passengerCount logic (you likely already have something)
+    int passengerCount = passengers.isNotEmpty
+        ? passengers.length
+        : (data['groupSize'] is int
+              ? data['groupSize'] as int
+              : (int.tryParse((data['passengerCount'] ?? '0').toString()) ??
+                    0));
 
     // 👇 BETTER: derive passengerCount from seatsBooked / passengers[] / fallback
     // int passengerCount = 0;
@@ -257,16 +451,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     } else if (data['passengers'] is List) {
       passengerCount = (data['passengers'] as List).length;
     } else {
-      passengerCount = int.tryParse(
-            (data['passengerCount'] ?? '0').toString(),
-          ) ??
-          0;
+      passengerCount =
+          int.tryParse((data['passengerCount'] ?? '0').toString()) ?? 0;
     }
 
-    final status = (data['status']?.toString() ??
-            data['rideRequestStatus']?.toString() ??
-            'requested')
-        .toLowerCase();
+    final status =
+        (data['status']?.toString() ??
+                data['rideRequestStatus']?.toString() ??
+                'requested')
+            .toLowerCase();
 
     return Booking(
       id: doc.id,
@@ -374,9 +567,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   ),
                   SizedBox(height: screenHeight * 0.02),
                   Container(
-                    margin: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.1,
-                    ),
+                    margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(25),
@@ -442,13 +633,42 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             }
 
             final docs = snapshot.data?.docs ?? [];
-            final List<Booking> allBookings =
-                docs.map((d) => _bookingFromDoc(d)).toList();
+            final List<Booking> allBookings = docs
+                .map((d) => _bookingFromDoc(d))
+                .toList();
 
-            final List<Booking> bookedBookings =
-                allBookings.where((b) => !b.isCompleted).toList();
-            final List<Booking> completedBookings =
-                allBookings.where((b) => b.isCompleted).toList();
+            // for (final doc in docs) {
+            //   final data = doc.data() as Map<String, dynamic>;
+            //   final status = (data['status'] ?? '').toString().toLowerCase();
+
+            //   final bool acceptEmailSent = data['acceptEmailSent'] == true;
+            //   final bool rejectEmailSent = data['rejectEmailSent'] == true;
+
+            //   final booking = _bookingFromDoc(doc);
+
+            //   if (status == 'accepted' && !acceptEmailSent) {
+            //     _sendBookingAcceptedEmail(booking);
+            //     doc.reference.update({
+            //       'acceptEmailSent': true,
+            //       'acceptEmailSentAt': FieldValue.serverTimestamp(),
+            //     });
+            //   }
+
+            //   if (status == 'rejected' && !rejectEmailSent) {
+            //     _sendBookingRejectedEmail(booking);
+            //     doc.reference.update({
+            //       'rejectEmailSent': true,
+            //       'rejectEmailSentAt': FieldValue.serverTimestamp(),
+            //     });
+            //   }
+            // }
+
+            final List<Booking> bookedBookings = allBookings
+                .where((b) => !b.isCompleted)
+                .toList();
+            final List<Booking> completedBookings = allBookings
+                .where((b) => b.isCompleted)
+                .toList();
 
             return Container(
               width: double.infinity,

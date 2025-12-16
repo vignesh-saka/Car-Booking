@@ -274,8 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 : Image.asset(
                                     defaultImagePath,
                                     fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) {
+                                    errorBuilder: (context, error, stackTrace) {
                                       // Fallback if image not found
                                       return Container(
                                         color: Colors.grey[300],
