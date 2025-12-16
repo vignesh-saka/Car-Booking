@@ -11,7 +11,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final Function(int)? onTabChange;
+  const ProfileScreen({super.key,this.onTabChange,});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -64,50 +65,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void onNavItemTapped(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-    switch (index) {
-      case 0:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const PublishRideScreen()),
-        );
-        break;
-
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
-        );
-        break;
-
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SearchScreen()),
-        );
-        break;
-
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HistoryScreen()),
-        );
-        break;
-
-      case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-        break;
-
-      default:
-        break;
-    }
-  }
 
   Future<void> _showImageSourceDialog() async {
     return showDialog(
@@ -288,33 +245,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         // Edit Button
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: _showImageSourceDialog,
-                            child: Container(
-                              width: screenWidth * 0.1,
-                              height: screenWidth * 0.1,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.edit,
-                                color: const Color(0xFFFF4444),
-                                size: screenWidth * 0.05,
-                              ),
-                            ),
-                          ),
-                        ),
+                      //   Positioned(
+                      //     bottom: 0,
+                      //     right: 0,
+                      //     child: GestureDetector(
+                      //       onTap: _showImageSourceDialog,
+                      //       child: Container(
+                      //         width: screenWidth * 0.1,
+                      //         height: screenWidth * 0.1,
+                      //         decoration: BoxDecoration(
+                      //           color: Colors.white,
+                      //           shape: BoxShape.circle,
+                      //           boxShadow: [
+                      //             BoxShadow(
+                      //               color: Colors.black.withOpacity(0.2),
+                      //               blurRadius: 6,
+                      //               offset: const Offset(0, 2),
+                      //             ),
+                      //           ],
+                      //         ),
+                      //         child: Icon(
+                      //           Icons.edit,
+                      //           color: const Color(0xFFFF4444),
+                      //           size: screenWidth * 0.05,
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
                       ],
                     ),
                     SizedBox(height: screenHeight * 0.02),
@@ -363,12 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         screenHeight: screenHeight,
                         onTap: () {
                           // TODO: Navigate to Edit Profile screen
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ProfileScreen(),
-                            ),
-                          );
+                          widget.onTabChange?.call(4); // Profile tab
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -385,20 +337,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         screenWidth: screenWidth,
                         screenHeight: screenHeight,
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const MyBookingsScreen(),
-                            ),
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'My Bookings',
-                                style: GoogleFonts.lexend(),
-                              ),
-                            ),
-                          );
+                          widget.onTabChange?.call(1); // My Bookings tab
+                          // ScaffoldMessenger.of(context).showSnackBar(
+                          //   SnackBar(
+                          //     content: Text(
+                          //       'My Bookings',
+                          //       style: GoogleFonts.lexend(),
+                          //     ),
+                          //   ),
+                          // );
                         },
                       ),
                       _buildMenuItem(
@@ -407,20 +354,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         screenWidth: screenWidth,
                         screenHeight: screenHeight,
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HistoryScreen(),
-                            ),
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Ride History',
-                                style: GoogleFonts.lexend(),
-                              ),
-                            ),
-                          );
+                          widget.onTabChange?.call(3); // History tab
+                          // ScaffoldMessenger.of(context).showSnackBar(
+                          //   SnackBar(
+                          //     content: Text(
+                          //       'Ride History',
+                          //       style: GoogleFonts.lexend(),
+                          //     ),
+                          //   ),
+                          // );
                         },
                       ),
                       SizedBox(height: screenHeight * 0.02),
@@ -473,7 +415,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-      
     );
   }
 

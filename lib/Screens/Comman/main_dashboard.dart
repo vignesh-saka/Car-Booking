@@ -1,10 +1,15 @@
+import 'dart:async';
+import 'package:bookmycar/internet_screens/no_internet_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
+
+import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
-import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
 
 class MainDashboard extends StatefulWidget {
   const MainDashboard({super.key});
@@ -14,27 +19,44 @@ class MainDashboard extends StatefulWidget {
 }
 
 class _MainDashboardState extends State<MainDashboard> {
-  int _selectedIndex = 2; // Search tab index
+  int _selectedIndex = 2;
+  bool _hasInternet = true;
 
-  final _screens = const [
-    PublishRideScreen(), // 0
-    MyBookingsScreen(), // 1
-    SearchScreen(), // 2
-    HistoryScreen(), // 3
-    ProfileScreen(), // 4
-  ];
+  late StreamSubscription _connectivitySub;
 
-  Future<bool> _onWillPop() async {
-    if (_selectedIndex != 2) {
-      // 🔹 If not on Search → go to Search
-      setState(() {
-        _selectedIndex = 2;
-      });
-      return false; // prevent app exit
-    }
+  // final _screens = const [
+  //   PublishRideScreen(),
+  //   MyBookingsScreen(),
+  //   SearchScreen(),
+  //   HistoryScreen(),
+  //   ProfileScreen(),
+  // ];
 
-    // 🔹 If already on Search → exit app
-    return true; // allows app to close
+  @override
+  void initState() {
+    super.initState();
+    _checkInternet();
+
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((_) {
+      _checkInternet();
+    });
+  }
+
+  Future<void> _checkInternet() async {
+    final hasConnection =
+        await InternetConnectionChecker.instance.hasConnection;
+
+    if (!mounted) return;
+
+    setState(() {
+      _hasInternet = hasConnection;
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySub.cancel();
+    super.dispose();
   }
 
   void _onItemTapped(int index) {
@@ -44,16 +66,41 @@ class _MainDashboardState extends State<MainDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final _screens = [
+      const PublishRideScreen(),
+      const MyBookingsScreen(),
+      const SearchScreen(),
+      const HistoryScreen(),
+      ProfileScreen(
+        onTabChange: (index) {
+          if (_selectedIndex == index) return;
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+      ),
+    ];
+
     return WillPopScope(
-      onWillPop: _onWillPop,
+      onWillPop: () async {
+        if (_selectedIndex != 2) {
+          setState(() => _selectedIndex = 2);
+          return false;
+        }
+        return true;
+      },
       child: Scaffold(
         body: SafeArea(
-          child: IndexedStack(index: _selectedIndex, children: _screens),
+          child: _hasInternet
+              ? IndexedStack(index: _selectedIndex, children: _screens)
+              : NoInternetWidget(onRetry: _checkInternet),
         ),
-        bottomNavigationBar: BottomNavigation(
-          selectedIndex: _selectedIndex,
-          onItemTapped: _onItemTapped,
-        ),
+        bottomNavigationBar: _hasInternet
+            ? BottomNavigation(
+                selectedIndex: _selectedIndex,
+                onItemTapped: _onItemTapped,
+              )
+            : null, // hide nav when offline
       ),
     );
   }
