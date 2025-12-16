@@ -52,6 +52,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
   Timer? _debounceTimer;
   String? _sessionToken;
   TimeOfDay? _pickupTimeOfDay;
+  // ignore: unused_field
   TimeOfDay? _dropTimeOfDay;
 
   List<PlacePrediction> fromSuggestions = [];
@@ -335,6 +336,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
       }
       */
 
+      // ignore: unused_local_variable
       final currentUid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
 
       await FirebaseFirestore.instance.collection("rides").add({

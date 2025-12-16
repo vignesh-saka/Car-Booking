@@ -1,4 +1,6 @@
 // // search_screen.dart
+// ignore_for_file: unused_field
+
 import 'dart:async';
 import 'dart:convert';
 // import 'dart:math';
@@ -459,6 +461,7 @@ class _SearchScreenState extends State<SearchScreen> {
           final String returnedPlaceId = result['place_id'] as String? ?? '';
 
           // address components -> extract locality/admin_area/postal_code
+          // ignore: unused_local_variable
           String? locality, adminArea, postalCode;
           final List<dynamic> components =
               result['address_components'] as List<dynamic>? ?? [];

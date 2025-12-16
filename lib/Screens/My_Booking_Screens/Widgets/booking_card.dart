@@ -63,7 +63,7 @@ class BookingCard extends StatelessWidget {
   // --------- POPUP FOR PASSENGER DETAILS ---------
   // --------- POPUP FOR PASSENGER DETAILS ---------
 void _showPassengerPopup(BuildContext context) {
-  final passengers = booking.passengers ?? [];
+  final passengers = booking.passengers;
 
   showDialog(
     context: context,

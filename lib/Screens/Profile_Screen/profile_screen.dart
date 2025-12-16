@@ -1,8 +1,4 @@
 import 'dart:io';
-import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
-import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
-import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:bookmycar/auth/login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -66,6 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 
+  // ignore: unused_element
   Future<void> _showImageSourceDialog() async {
     return showDialog(
       context: context,

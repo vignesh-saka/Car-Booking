@@ -58,6 +58,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
             final List<RideRequest> loaded = [];
 
             for (final doc in snapshot.docs) {
+              // ignore: unnecessary_cast
               final data = doc.data() as Map<String, dynamic>;
 
               final bool driverNotified = data['driverNotified'] == true;
