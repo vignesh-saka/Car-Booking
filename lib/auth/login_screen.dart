@@ -1,4 +1,4 @@
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
+import 'package:bookmycar/Screens/Comman/main_dashboard.dart';
 import 'package:bookmycar/auth/forgotPassword_screen.dart';
 import 'package:bookmycar/auth/signup_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -165,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const SearchScreen()),
+        MaterialPageRoute(builder: (context) => const MainDashboard()),
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -238,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const SearchScreen()),
+        MaterialPageRoute(builder: (context) => const MainDashboard()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
