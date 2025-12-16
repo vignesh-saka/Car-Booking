@@ -2,12 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
-import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
-import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
-import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishsucess_screen.dart';
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:firebase_storage/firebase_storage.dart';
@@ -1410,47 +1405,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigation(
-        selectedIndex: selectedIndex,
-        onItemTapped: (index) {
-          setState(() => selectedIndex = index);
-          switch (index) {
-            case 0:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => PublishRideScreen()),
-              );
-              break;
-            case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => MyBookingsScreen()),
-              );
-              break;
-            case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SearchScreen()),
-              );
-              break;
-            case 3:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => HistoryScreen()),
-              );
-              break;
-            case 4:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfileScreen()),
-              );
-              break;
-          }
-        },
-        screenWidth: screenWidth,
-        screenHeight: screenHeight,
-      ),
-    );
+   );
   }
 }
 

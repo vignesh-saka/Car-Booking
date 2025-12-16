@@ -1,7 +1,6 @@
 // my_bookings_screen.dart
 import 'dart:async';
 
-import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
 import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Model/models.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
@@ -704,12 +703,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             );
           },
         ),
-      ),
-      bottomNavigationBar: BottomNavigation(
-        selectedIndex: selectedIndex,
-        onItemTapped: onNavItemTapped,
-        screenWidth: screenWidth,
-        screenHeight: screenHeight,
       ),
     );
   }

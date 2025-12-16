@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
 import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
@@ -474,12 +473,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigation(
-        selectedIndex: selectedIndex,
-        onItemTapped: onNavItemTapped,
-        screenWidth: screenWidth,
-        screenHeight: screenHeight,
-      ),
+      
     );
   }
 

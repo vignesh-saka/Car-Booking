@@ -1,4 +1,3 @@
-import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
 import 'package:bookmycar/Screens/History_Screens/Widgets/history_ride_card.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
@@ -297,12 +296,7 @@ class _HistoryScreenState extends State<HistoryScreen>
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigation(
-        selectedIndex: selectedIndex,
-        onItemTapped: onNavItemTapped,
-        screenWidth: screenWidth,
-        screenHeight: screenHeight,
-      ),
+      
     );
   }
 }

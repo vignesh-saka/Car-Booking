@@ -1,6 +1,5 @@
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.dart';
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/booking_details_screen.dart';
-import 'package:bookmycar/Screens/Comman/bottom_navigation.dart';
 import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
@@ -456,12 +455,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
       ),
 
       // Bottom Navigation
-      bottomNavigationBar: BottomNavigation(
-        selectedIndex: selectedIndex,
-        onItemTapped: onNavItemTapped,
-        screenWidth: screenWidth,
-        screenHeight: screenHeight,
-      ),
+      
     );
   }
 }

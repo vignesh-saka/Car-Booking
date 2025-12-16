@@ -45,7 +45,9 @@ class NavBarItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFFF4444) : Colors.transparent,
+                color: isSelected
+                    ? const Color(0xFFFF4444)
+                    : Colors.transparent,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -57,6 +59,8 @@ class NavBarItem extends StatelessWidget {
             SizedBox(height: 5),
             Text(
               label,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
               style: GoogleFonts.lexend(
                 fontSize: screenWidth * 0.029,
                 fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,

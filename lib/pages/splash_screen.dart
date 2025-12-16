@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
+import 'package:bookmycar/Screens/Comman/main_dashboard.dart';
 import 'package:bookmycar/auth/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -35,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // 👉 Already logged in → go to SearchScreen
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const SearchScreen()),
+        MaterialPageRoute(builder: (context) => const MainDashboard()),
       );
     }
   }
