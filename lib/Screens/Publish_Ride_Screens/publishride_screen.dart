@@ -16,7 +16,8 @@ import 'package:intl/intl.dart'; // <-- added
 /// PublishRideScreen with Google Places Autocomplete + Place Details
 /// Autocomplete triggers after >=3 characters and is restricted to India.
 class PublishRideScreen extends StatefulWidget {
-  const PublishRideScreen({super.key});
+  final VoidCallback? onPublishSuccess;
+  const PublishRideScreen({super.key, this.onPublishSuccess});
 
   @override
   State<PublishRideScreen> createState() => _PublishRideScreenState();
@@ -295,7 +296,14 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
     // kept for compatibility
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => PublishsucessScreen()),
+      MaterialPageRoute(
+        builder: (context) => PublishsucessScreen(
+          onGoToHistory: () {
+            Navigator.pop(context); // close success screen
+            widget.onPublishSuccess?.call();
+          },
+        ),
+      ),
     );
   }
 
@@ -375,7 +383,14 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
 
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => PublishsucessScreen()),
+        MaterialPageRoute(
+          builder: (context) => PublishsucessScreen(
+            onGoToHistory: () {
+              Navigator.pop(context); // close success screen
+              widget.onPublishSuccess?.call();
+            },
+          ),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(
@@ -1407,7 +1422,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
           ],
         ),
       ),
-   );
+    );
   }
 }
 

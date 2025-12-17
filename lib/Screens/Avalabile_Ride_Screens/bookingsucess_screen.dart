@@ -1,9 +1,9 @@
-import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class BookingSucessScreen extends StatelessWidget {
-  const BookingSucessScreen({super.key});
+  final VoidCallback onGoToMyBookings;
+  const BookingSucessScreen({super.key, required this.onGoToMyBookings});
 
   @override
   Widget build(BuildContext context) {
@@ -72,14 +72,8 @@ class BookingSucessScreen extends StatelessWidget {
                         SizedBox(height: screenHeight * 0.25),
                         Center(
                           child: TextButton(
-                            onPressed: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => MyBookingsScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: onGoToMyBookings,
+
                             child: Text(
                               'Go To My Booking Section',
                               style: GoogleFonts.lexend(

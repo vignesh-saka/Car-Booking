@@ -17,7 +17,8 @@ import 'package:http/http.dart' as http;
 /// SearchScreen with Google Places Autocomplete (India-only) for From/To fields.
 /// Autocomplete triggers after 3 characters and uses a session token.
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final VoidCallback onBookingSuccess;
+  const SearchScreen({super.key,required this.onBookingSuccess,});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -209,6 +210,10 @@ class _SearchScreenState extends State<SearchScreen> {
           toPlaceId: _toPlaceId,
           toLat: toLatLng?.lat,
           toLng: toLatLng?.lng,
+          onBookingSuccess: () {
+            Navigator.pop(context); // close success screen
+            widget.onBookingSuccess(); // 👈 notify MainDashboard
+          },
         ),
       ),
     );

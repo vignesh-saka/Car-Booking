@@ -1,8 +1,4 @@
 import 'package:bookmycar/Screens/History_Screens/Widgets/history_ride_card.dart';
-import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
-import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
-import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -115,43 +111,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     }
   }
 
-  void onNavItemTapped(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-    switch (index) {
-      case 0:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const PublishRideScreen()),
-        );
-        break;
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
-        );
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SearchScreen()),
-        );
-        break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HistoryScreen()),
-        );
-        break;
-      case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-        break;
-    }
-  }
 
   Widget _buildRidesList(
     List<Ride> rides,

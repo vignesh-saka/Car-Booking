@@ -1,21 +1,18 @@
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.dart';
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/booking_details_screen.dart';
-import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
-import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
-import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
-import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class RideDetailScreen extends StatefulWidget {
   final RideData ride;
   final int requestedPassengers;
+  final VoidCallback onBookingSuccess;
 
   const RideDetailScreen({
     super.key,
     required this.ride,
     required this.requestedPassengers,
+    required this.onBookingSuccess,
   });
 
   @override
@@ -27,56 +24,18 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
   // bool isSubmitting = false;
   // bool isBooked = false;
 
-  void onNavItemTapped(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-    switch (index) {
-      case 0:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => PublishRideScreen()),
-        );
-        break;
-
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => MyBookingsScreen()),
-        );
-        break;
-
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => SearchScreen()),
-        );
-        break;
-
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => HistoryScreen()),
-        );
-        break;
-
-      case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => ProfileScreen()),
-        );
-        break;
-
-      default:
-        break;
-    }
-  }
 
   void onBookNow() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => BookingDetailsScreen(ride: widget.ride),
+        builder: (context) => BookingDetailsScreen(
+          ride: widget.ride,
+          onBookingSuccess: () {
+            Navigator.pop(context); // close success screen
+            widget.onBookingSuccess(); // 👈 notify MainDashboard
+          },
+        ),
       ),
     );
   }
@@ -463,6 +422,11 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           ),
         ),
       ),
+<<<<<<< HEAD
+=======
+
+      // Bottom Navigation
+>>>>>>> f89600a34a2157a0c7572a328982ebe244e0218f
     );
   }
 }
