@@ -24,6 +24,8 @@ class RideDetailScreen extends StatefulWidget {
 
 class _RideDetailScreenState extends State<RideDetailScreen> {
   int selectedIndex = 2;
+  // bool isSubmitting = false;
+  // bool isBooked = false;
 
   void onNavItemTapped(int index) {
     setState(() {
@@ -91,15 +93,19 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     return {'city': city, 'rest': rest};
   }
 
-  Widget _buildAddressWidget(String address, double screenWidth,
-      {bool alignRight = false}) {
+  Widget _buildAddressWidget(
+    String address,
+    double screenWidth, {
+    bool alignRight = false,
+  }) {
     final parts = _splitAddress(address);
     final city = parts['city']!;
     final rest = parts['rest']!;
 
     return Column(
-      crossAxisAlignment:
-          alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: alignRight
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         // City (bold)
@@ -264,8 +270,10 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                                         SizedBox(width: screenWidth * 0.01),
                                         Flexible(
                                           child: _buildAddressWidget(
-                                              widget.ride.fromCity, screenWidth,
-                                              alignRight: false),
+                                            widget.ride.fromCity,
+                                            screenWidth,
+                                            alignRight: false,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -321,8 +329,10 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                                   // To-address column
                                   Flexible(
                                     child: _buildAddressWidget(
-                                        widget.ride.toCity, screenWidth,
-                                        alignRight: false),
+                                      widget.ride.toCity,
+                                      screenWidth,
+                                      alignRight: false,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -453,9 +463,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           ),
         ),
       ),
-
-      // Bottom Navigation
-      
     );
   }
 }

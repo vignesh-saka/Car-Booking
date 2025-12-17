@@ -164,7 +164,7 @@ class _HistoryScreenState extends State<HistoryScreen>
           'No rides found',
           style: GoogleFonts.lexend(
             fontSize: screenWidth * 0.04,
-            color: Colors.black54,
+            color: Colors.white,
           ),
         ),
       );
@@ -296,7 +296,6 @@ class _HistoryScreenState extends State<HistoryScreen>
           ),
         ),
       ),
-      
     );
   }
 }

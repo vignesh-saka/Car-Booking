@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:bookmycar/auth/login_screen.dart';
+import 'package:bookmycar/settings/settings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Function(int)? onTabChange;
-  const ProfileScreen({super.key,this.onTabChange,});
+  const ProfileScreen({super.key, this.onTabChange});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -60,7 +61,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       debugPrint("Error loading user data: $e");
     }
   }
-
 
   // ignore: unused_element
   Future<void> _showImageSourceDialog() async {
@@ -242,33 +242,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         // Edit Button
-                      //   Positioned(
-                      //     bottom: 0,
-                      //     right: 0,
-                      //     child: GestureDetector(
-                      //       onTap: _showImageSourceDialog,
-                      //       child: Container(
-                      //         width: screenWidth * 0.1,
-                      //         height: screenWidth * 0.1,
-                      //         decoration: BoxDecoration(
-                      //           color: Colors.white,
-                      //           shape: BoxShape.circle,
-                      //           boxShadow: [
-                      //             BoxShadow(
-                      //               color: Colors.black.withOpacity(0.2),
-                      //               blurRadius: 6,
-                      //               offset: const Offset(0, 2),
-                      //             ),
-                      //           ],
-                      //         ),
-                      //         child: Icon(
-                      //           Icons.edit,
-                      //           color: const Color(0xFFFF4444),
-                      //           size: screenWidth * 0.05,
-                      //         ),
-                      //       ),
-                      //     ),
-                      //   ),
+                        //   Positioned(
+                        //     bottom: 0,
+                        //     right: 0,
+                        //     child: GestureDetector(
+                        //       onTap: _showImageSourceDialog,
+                        //       child: Container(
+                        //         width: screenWidth * 0.1,
+                        //         height: screenWidth * 0.1,
+                        //         decoration: BoxDecoration(
+                        //           color: Colors.white,
+                        //           shape: BoxShape.circle,
+                        //           boxShadow: [
+                        //             BoxShadow(
+                        //               color: Colors.black.withOpacity(0.2),
+                        //               blurRadius: 6,
+                        //               offset: const Offset(0, 2),
+                        //             ),
+                        //           ],
+                        //         ),
+                        //         child: Icon(
+                        //           Icons.edit,
+                        //           color: const Color(0xFFFF4444),
+                        //           size: screenWidth * 0.05,
+                        //         ),
+                        //       ),
+                        //     ),
+                        //   ),
                       ],
                     ),
                     SizedBox(height: screenHeight * 0.02),
@@ -311,21 +311,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     children: [
                       _buildMenuItem(
-                        icon: Icons.edit_outlined,
-                        title: 'Edit Profile',
+                        icon: Icons.settings,
+                        title: 'Settings',
                         screenWidth: screenWidth,
                         screenHeight: screenHeight,
                         onTap: () {
-                          // TODO: Navigate to Edit Profile screen
-                          widget.onTabChange?.call(4); // Profile tab
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Edit Profile - Coming Soon',
-                                style: GoogleFonts.lexend(),
-                              ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsPage(),
                             ),
                           );
+                          widget.onTabChange?.call(4); // Profile tab
+                          // ScaffoldMessenger.of(context).showSnackBar(
+                          //   SnackBar(
+                          //     content: Text(
+                          //       'Edit Profile - Coming Soon',
+                          //       style: GoogleFonts.lexend(),
+                          //     ),
+                          //   ),
+                          // );
                         },
                       ),
                       _buildMenuItem(
