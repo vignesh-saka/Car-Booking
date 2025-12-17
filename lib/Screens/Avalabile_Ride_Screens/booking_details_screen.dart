@@ -1,10 +1,5 @@
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.dart';
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/bookingsucess_screen.dart';
-import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
-import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
-import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
-import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -15,7 +10,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 class BookingDetailsScreen extends StatefulWidget {
   final RideData ride;
 
-  const BookingDetailsScreen({super.key, required this.ride});
+  final VoidCallback onBookingSuccess;
+
+  const BookingDetailsScreen({
+    super.key,
+    required this.ride,
+    required this.onBookingSuccess,
+  });
 
   @override
   State<BookingDetailsScreen> createState() => _BookingDetailsScreenState();
@@ -172,45 +173,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-  void onNavItemTapped(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-    switch (index) {
-      case 0:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const PublishRideScreen()),
-        );
-        break;
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
-        );
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SearchScreen()),
-        );
-        break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HistoryScreen()),
-        );
-        break;
-      case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-        break;
-      default:
-        break;
-    }
-  }
 
   // ----------------------------------------------------------
   // Save booking to Firestore + create ride_request
@@ -365,7 +327,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       Future.delayed(const Duration(milliseconds: 600), () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const BookingSucessScreen()),
+          MaterialPageRoute(
+            builder: (context) => BookingSucessScreen(
+              onGoToMyBookings: () {
+                Navigator.pop(context); // close success screen
+                widget.onBookingSuccess(); // 👈 notify MainDashboard
+              },
+            ),
+          ),
         );
       });
     } catch (e, st) {
@@ -766,7 +735,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ),
         ),
       ),
-      
     );
   }
 }

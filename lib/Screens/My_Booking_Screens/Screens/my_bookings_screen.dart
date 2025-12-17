@@ -1,11 +1,7 @@
 // my_bookings_screen.dart
 import 'dart:async';
 
-import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Model/models.dart';
-import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
-import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/booking_card.dart';
@@ -37,6 +33,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         .snapshots()
         .listen((snapshot) {
           for (final doc in snapshot.docs) {
+            // ignore: unnecessary_cast
             final data = doc.data() as Map<String, dynamic>;
             final bookingId = doc.id;
 
@@ -230,45 +227,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     });
   }
 
-  void onNavItemTapped(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-    switch (index) {
-      case 0:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const PublishRideScreen()),
-        );
-        break;
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
-        );
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SearchScreen()),
-        );
-        break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HistoryScreen()),
-        );
-        break;
-      case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-        break;
-      default:
-        break;
-    }
-  }
 
   // ------------------ Helpers ------------------
 

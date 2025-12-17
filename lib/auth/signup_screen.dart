@@ -31,11 +31,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       // 1️⃣ Create user in Firebase Auth
-      UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       String uid = userCredential.user!.uid;
 
@@ -70,10 +70,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: $e"),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -106,8 +103,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       // 3️⃣ Sign into Firebase with Google credential
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
 
       final User? user = userCredential.user;
       if (user == null) {
@@ -142,7 +139,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const SearchScreen()),
+        MaterialPageRoute(
+          builder: (context) => SearchScreen(onBookingSuccess: () {}),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -276,8 +275,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             fontSize: height * 0.016,
                           ),
                         ),
-                        validator: (value) =>
-                            value!.trim().isEmpty ? "Please enter your name" : null,
+                        validator: (value) => value!.trim().isEmpty
+                            ? "Please enter your name"
+                            : null,
                       ),
 
                       SizedBox(height: height * 0.02),
@@ -323,8 +323,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "Please enter your email";
-                          } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$')
-                              .hasMatch(value)) {
+                          } else if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
+                          ).hasMatch(value)) {
                             return "Enter a valid email";
                           }
                           return null;
@@ -420,7 +421,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   "Loading...",
                                   style: GoogleFonts.lexend(
                                     color: const Color.fromARGB(
-                                        255, 255, 255, 255),
+                                      255,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
                                     fontWeight: FontWeight.bold,
                                     fontSize: height * 0.020,
                                   ),
@@ -476,14 +481,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
 
             // -------- BELOW RED CARD (white area) ----------
-
             SizedBox(height: height * 0.03),
 
             Row(
               children: [
-                Expanded(
-                  child: Divider(color: Colors.black54),
-                ),
+                Expanded(child: Divider(color: Colors.black54)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Text(
@@ -494,9 +496,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Divider(color: Colors.black54),
-                ),
+                Expanded(child: Divider(color: Colors.black54)),
               ],
             ),
 
@@ -524,8 +524,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           height: 20,
                           child: const CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : Row(

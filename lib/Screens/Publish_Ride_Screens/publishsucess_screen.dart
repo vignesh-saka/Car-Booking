@@ -1,9 +1,9 @@
-import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PublishsucessScreen extends StatelessWidget {
-  const PublishsucessScreen({super.key});
+  final VoidCallback onGoToHistory;
+  const PublishsucessScreen({super.key, required this.onGoToHistory});
 
   @override
   Widget build(BuildContext context) {
@@ -71,14 +71,7 @@ class PublishsucessScreen extends StatelessWidget {
                         SizedBox(height: screenHeight * 0.25),
                         Center(
                           child: TextButton(
-                            onPressed: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const HistoryScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: onGoToHistory,
                             child: Text(
                               'Go To History Section',
                               style: GoogleFonts.lexend(

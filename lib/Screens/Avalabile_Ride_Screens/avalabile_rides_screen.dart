@@ -1,9 +1,4 @@
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/ride_detail_screen.dart';
-import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
-import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
-import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
-import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
-import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,8 +8,9 @@ class AvailableRidesScreen extends StatefulWidget {
   final String to;
   final String date;
   final int passengers;
+  final VoidCallback onBookingSuccess;
 
-   // NEW: optional robust-matching fields (nullable)
+  // NEW: optional robust-matching fields (nullable)
   final String? fromPlaceId;
   final double? fromLat;
   final double? fromLng;
@@ -34,7 +30,7 @@ class AvailableRidesScreen extends StatefulWidget {
     this.toPlaceId,
     this.toLat,
     this.toLng,
-
+    required this.onBookingSuccess,
   });
 
   @override
@@ -85,32 +81,6 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
     }
   }
 
-  void onNavItemTapped(int index) {
-    setState(() => selectedIndex = index);
-
-    switch (index) {
-      case 0:
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => PublishRideScreen()));
-        break;
-      case 1:
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => MyBookingsScreen()));
-        break;
-      case 2:
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => SearchScreen()));
-        break;
-      case 3:
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => HistoryScreen()));
-        break;
-      case 4:
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => ProfileScreen()));
-        break;
-    }
-  }
 
   void onRideSelected(RideData ride) {
     Navigator.push(
@@ -119,6 +89,10 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
         builder: (context) => RideDetailScreen(
           ride: ride,
           requestedPassengers: widget.passengers,
+          onBookingSuccess: () {
+            Navigator.pop(context); // close success screen
+            widget.onBookingSuccess(); // 👈 notify MainDashboard
+          },
         ),
       ),
     );
@@ -185,9 +159,7 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
 
               // ---------------- TOP TITLE + CALENDAR ----------------
               Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.05,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -253,9 +225,11 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                         return Center(
                           child: Column(
                             children: [
-                              Icon(Icons.search_off,
-                                  size: screenWidth * 0.2,
-                                  color: Colors.grey[400]),
+                              Icon(
+                                Icons.search_off,
+                                size: screenWidth * 0.2,
+                                color: Colors.grey[400],
+                              ),
                               SizedBox(height: screenHeight * 0.02),
                               Text(
                                 'No rides available',
@@ -278,7 +252,7 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                               docs[index].data() as Map<String, dynamic>;
 
                           RideData ride = RideData(
-                            id: docs[index].id, 
+                            id: docs[index].id,
                             departureTime: data["pickupTime"],
                             arrivalTime: data["dropTime"],
                             fromCity: data["fromCity"],
@@ -310,7 +284,6 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
       ),
 
       // ---------------- BOTTOM NAV ----------------
-      
     );
   }
 }
@@ -343,8 +316,7 @@ class RideData {
     required this.bookedSeats,
     required this.price,
     required this.date,
-    this.description = '', 
-
+    this.description = '',
   });
 
   int get availableSeats => totalSeats - bookedSeats;
@@ -378,8 +350,9 @@ class RideCard extends StatelessWidget {
     final address = splitAddress(text);
 
     return Column(
-      crossAxisAlignment:
-          alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: alignRight
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
@@ -449,14 +422,14 @@ class RideCard extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.location_on,
-                              size: screenWidth * 0.04,
-                              color: Colors.grey[600]),
+                          Icon(
+                            Icons.location_on,
+                            size: screenWidth * 0.04,
+                            color: Colors.grey[600],
+                          ),
                           SizedBox(width: screenWidth * 0.01),
 
-                          Flexible(
-                            child: buildAddress(ride.fromCity, false),
-                          ),
+                          Flexible(child: buildAddress(ride.fromCity, false)),
                         ],
                       ),
                     ],
@@ -466,8 +439,11 @@ class RideCard extends StatelessWidget {
                 /// Arrow icon
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-                  child: Icon(Icons.arrow_forward,
-                      color: Colors.grey[400], size: screenWidth * 0.05),
+                  child: Icon(
+                    Icons.arrow_forward,
+                    color: Colors.grey[400],
+                    size: screenWidth * 0.05,
+                  ),
                 ),
 
                 /// RIGHT SIDE → To address
@@ -488,13 +464,13 @@ class RideCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Flexible(
-                            child: buildAddress(ride.toCity, true),
-                          ),
+                          Flexible(child: buildAddress(ride.toCity, true)),
                           SizedBox(width: screenWidth * 0.01),
-                          Icon(Icons.location_on,
-                              size: screenWidth * 0.04,
-                              color: Colors.grey[600]),
+                          Icon(
+                            Icons.location_on,
+                            size: screenWidth * 0.04,
+                            color: Colors.grey[600],
+                          ),
                         ],
                       ),
                     ],
@@ -512,8 +488,11 @@ class RideCard extends StatelessWidget {
                 CircleAvatar(
                   radius: screenWidth * 0.05,
                   backgroundColor: Colors.grey[300],
-                  child: Icon(Icons.person,
-                      color: Colors.grey[600], size: screenWidth * 0.05),
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.grey[600],
+                    size: screenWidth * 0.05,
+                  ),
                 ),
                 SizedBox(width: screenWidth * 0.03),
 

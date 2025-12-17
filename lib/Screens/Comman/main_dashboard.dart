@@ -19,22 +19,41 @@ class MainDashboard extends StatefulWidget {
 }
 
 class _MainDashboardState extends State<MainDashboard> {
-  int _selectedIndex = 2;
+  int _selectedIndex = 2; // Search
   bool _hasInternet = true;
 
-  late StreamSubscription _connectivitySub;
-
-  // final _screens = const [
-  //   PublishRideScreen(),
-  //   MyBookingsScreen(),
-  //   SearchScreen(),
-  //   HistoryScreen(),
-  //   ProfileScreen(),
-  // ];
+  late final List<Widget> _screens;
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySub;
 
   @override
   void initState() {
     super.initState();
+
+    _screens = [
+      PublishRideScreen(
+        onPublishSuccess: () {
+          setState(() {
+            _selectedIndex = 3; // History
+          });
+        },
+      ),
+      const MyBookingsScreen(),
+      SearchScreen(
+        onBookingSuccess: () {
+          setState(() {
+            _selectedIndex = 1; // My Bookings
+          });
+        },
+      ),
+      const HistoryScreen(),
+      ProfileScreen(
+        onTabChange: (index) {
+          if (_selectedIndex == index) return;
+          setState(() => _selectedIndex = index);
+        },
+      ),
+    ];
+
     _checkInternet();
 
     _connectivitySub = Connectivity().onConnectivityChanged.listen((_) {
@@ -48,15 +67,7 @@ class _MainDashboardState extends State<MainDashboard> {
 
     if (!mounted) return;
 
-    setState(() {
-      _hasInternet = hasConnection;
-    });
-  }
-
-  @override
-  void dispose() {
-    _connectivitySub.cancel();
-    super.dispose();
+    setState(() => _hasInternet = hasConnection);
   }
 
   void _onItemTapped(int index) {
@@ -65,22 +76,13 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final _screens = [
-      const PublishRideScreen(),
-      const MyBookingsScreen(),
-      const SearchScreen(),
-      const HistoryScreen(),
-      ProfileScreen(
-        onTabChange: (index) {
-          if (_selectedIndex == index) return;
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-      ),
-    ];
+  void dispose() {
+    _connectivitySub.cancel();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
         if (_selectedIndex != 2) {
@@ -100,7 +102,7 @@ class _MainDashboardState extends State<MainDashboard> {
                 selectedIndex: _selectedIndex,
                 onItemTapped: _onItemTapped,
               )
-            : null, // hide nav when offline
+            : null,
       ),
     );
   }
