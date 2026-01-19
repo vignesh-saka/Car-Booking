@@ -141,8 +141,8 @@ class Termsandconditions extends StatelessWidget {
             _sectionTitle("14. Contact Us"),
             _sectionText(
               "If you have any questions or concerns about these Terms, contact us at:\n\n"
-              "📧 Email: bookmycar.505425@gmail.com\n"
-              "📱 App Name: Book My Car",
+              "📧 bookmycar.505425@gmail.com\n"
+              "📱 Book My Car",
             ),
 
             const SizedBox(height: 30),

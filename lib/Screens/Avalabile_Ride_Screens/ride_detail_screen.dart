@@ -24,7 +24,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
   // bool isSubmitting = false;
   // bool isBooked = false;
 
-
   void onBookNow() {
     Navigator.push(
       context,
@@ -422,11 +421,8 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           ),
         ),
       ),
-<<<<<<< HEAD
-=======
 
       // Bottom Navigation
->>>>>>> f89600a34a2157a0c7572a328982ebe244e0218f
     );
   }
 }

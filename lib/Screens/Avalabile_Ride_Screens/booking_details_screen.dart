@@ -23,6 +23,7 @@ class BookingDetailsScreen extends StatefulWidget {
 }
 
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
+  bool isBooking = false;
   int selectedIndex = 2;
   int numberOfPassengers = 1;
   List<PassengerDetail> passengers = [
@@ -173,11 +174,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-
   // ----------------------------------------------------------
   // Save booking to Firestore + create ride_request
   // ----------------------------------------------------------
-  void onBookNow() async {
+  Future<void> onBookNow() async {
     // Ensure passengers list length matches numberOfPassengers
     while (passengers.length < numberOfPassengers) {
       passengers.add(PassengerDetail(name: '', age: '', phone: ''));
@@ -703,7 +703,25 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: onBookNow,
+                            onPressed: isBooking
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      isBooking = true;
+                                    });
+
+                                    try {
+                                      await onBookNow(); // your existing booking logic
+                                    } catch (e) {
+                                      // handle error if needed
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          isBooking = false;
+                                        });
+                                      }
+                                    }
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFF3B30),
                               padding: EdgeInsets.symmetric(
@@ -714,14 +732,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               ),
                               elevation: 0,
                             ),
-                            child: Text(
-                              'Book Now',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.045,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
+                            child: isBooking
+                                ? SizedBox(
+                                    height: screenHeight * 0.025,
+                                    width: screenHeight * 0.025,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    'Book Now',
+                                    style: GoogleFonts.lexend(
+                                      fontSize: screenWidth * 0.045,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],

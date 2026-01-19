@@ -162,8 +162,8 @@ class PrivacyPolicy extends StatelessWidget {
             _sectionText(
               "If you have questions or concerns about this Privacy Policy, "
               "contact us at:\n\n"
-              "📧 Email: bookmycar.505425@gmail.com\n"
-              "📱 App Name: Book My Car",
+              "📧 bookmycar.505425@gmail.com\n"
+              "📱 Book My Car",
             ),
 
             const SizedBox(height: 30),

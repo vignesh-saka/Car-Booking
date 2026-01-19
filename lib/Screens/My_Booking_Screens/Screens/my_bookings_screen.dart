@@ -16,7 +16,7 @@ class MyBookingsScreen extends StatefulWidget {
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
 }
 
-final Set<String> _processedBookingIds = {};
+// final Set<String> _processedBookingIds = {};
 StreamSubscription<QuerySnapshot>? _bookingSub;
 
 class _MyBookingsScreenState extends State<MyBookingsScreen>
@@ -35,19 +35,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           for (final doc in snapshot.docs) {
             // ignore: unnecessary_cast
             final data = doc.data() as Map<String, dynamic>;
-            final bookingId = doc.id;
+            // final bookingId = doc.id;
 
             // Prevent re-processing same booking in this session
-            if (_processedBookingIds.contains(bookingId)) continue;
+            // if (_processedBookingIds.contains(bookingId)) continue;
 
             final status = (data['status'] ?? '').toString().toLowerCase();
-            final bool acceptEmailSent = data['acceptEmailSent'] == true;
-            final bool rejectEmailSent = data['rejectEmailSent'] == true;
+            // final bool acceptEmailSent = data['acceptEmailSent'] == true;
+            // final bool rejectEmailSent = data['rejectEmailSent'] == true;
 
             final booking = _bookingFromDoc(doc);
 
-            if (status == 'accepted' && !acceptEmailSent) {
-              _processedBookingIds.add(bookingId);
+            if (status == 'accepted' && data['acceptEmailSent'] != true) {
+              // _processedBookingIds.add(bookingId);
 
               Future.microtask(() async {
                 await _sendBookingAcceptedEmail(booking);
@@ -58,8 +58,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               });
             }
 
-            if (status == 'rejected' && !rejectEmailSent) {
-              _processedBookingIds.add(bookingId);
+            if (status == 'rejected' && data['rejectEmailSent'] != true) {
+              // _processedBookingIds.add(bookingId);
 
               Future.microtask(() async {
                 await _sendBookingRejectedEmail(booking);
@@ -226,7 +226,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       },
     });
   }
-
 
   // ------------------ Helpers ------------------
 

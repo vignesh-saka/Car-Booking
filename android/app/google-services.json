@@ -7,6 +7,58 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:63717521520:android:ea9cd55abb1e2a866e5cb5",
+        "android_client_info": {
+          "package_name": "com.bookmycar.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "63717521520-ns94b16to8qrg8k1b7bapasigu7jqn7k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bookmycar.app",
+            "certificate_hash": "87f719edea01f2d927177322040037469c2bb609"
+          }
+        },
+        {
+          "client_id": "63717521520-tc3dhrggsmrrtcq556dpl2vo7rqsmgde.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bookmycar.app",
+            "certificate_hash": "bdcbe7304613f48313618ecedee65d32ab02706c"
+          }
+        },
+        {
+          "client_id": "63717521520-7bead2vm21jhlshdk450m9qm8fmaaq42.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0YzYM2SMNib_QNRiqnILXWqieKZrXjqQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "63717521520-7bead2vm21jhlshdk450m9qm8fmaaq42.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "63717521520-106sqh7ldjvng0thg07i23r81424vb87.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.bookmycar"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:63717521520:android:26a22b8cba9cba5d6e5cb5",
         "android_client_info": {
           "package_name": "com.example.bookmycar"

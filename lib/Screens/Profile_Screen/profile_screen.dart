@@ -403,7 +403,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SizedBox(height: screenHeight * 0.05),
 
                       Text(
-                        'App Version 1.0.0',
+                        'App Version 5.0.0',
                         style: GoogleFonts.lexend(
                           fontSize: screenWidth * 0.035,
                           color: Colors.white.withOpacity(0.7),

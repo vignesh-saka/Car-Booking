@@ -18,7 +18,7 @@ import 'package:http/http.dart' as http;
 /// Autocomplete triggers after 3 characters and uses a session token.
 class SearchScreen extends StatefulWidget {
   final VoidCallback onBookingSuccess;
-  const SearchScreen({super.key,required this.onBookingSuccess,});
+  const SearchScreen({super.key, required this.onBookingSuccess});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -108,7 +108,7 @@ class _SearchScreenState extends State<SearchScreen> {
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
-      lastDate: DateTime(2025, 12, 31),
+      lastDate: DateTime(2100, 12, 31),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -123,6 +123,14 @@ class _SearchScreenState extends State<SearchScreen> {
         dateController.text = '${picked.day}/${picked.month}/${picked.year}';
       });
     }
+  }
+
+  void clearFields() {
+    setState(() {
+      fromController.clear();
+      toController.clear();
+      dateController.clear();
+    });
   }
 
   // Search action
@@ -196,7 +204,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
 
     // Now actually navigate to results screen
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AvailableRidesScreen(
@@ -217,6 +225,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       ),
     );
+    clearFields();
   }
 
   // Bottom nav
@@ -811,60 +820,60 @@ class _SearchScreenState extends State<SearchScreen> {
 
                       SizedBox(height: screenHeight * 0.02),
 
-                      // ================= PASSENGERS =================
-                      Text(
-                        'No. of Passengers',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.035,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.012),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: decrementPassengers,
-                            child: Container(
-                              width: screenWidth * 0.1,
-                              height: screenWidth * 0.1,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.remove,
-                                color: Color(0xFFFF4444),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: screenWidth * 0.04),
-                          Text(
-                            '$passengers',
-                            style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.05,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(width: screenWidth * 0.04),
-                          GestureDetector(
-                            onTap: incrementPassengers,
-                            child: Container(
-                              width: screenWidth * 0.1,
-                              height: screenWidth * 0.1,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.add,
-                                color: Color(0xFFFF4444),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: screenHeight * 0.025),
+                      // // ================= PASSENGERS =================
+                      // Text(
+                      //   'No. of Passengers',
+                      //   style: GoogleFonts.lexend(
+                      //     fontSize: screenWidth * 0.035,
+                      //     color: Colors.white,
+                      //   ),
+                      // ),
+                      // SizedBox(height: screenHeight * 0.012),
+                      // Row(
+                      //   children: [
+                      //     GestureDetector(
+                      //       onTap: decrementPassengers,
+                      //       child: Container(
+                      //         width: screenWidth * 0.1,
+                      //         height: screenWidth * 0.1,
+                      //         decoration: const BoxDecoration(
+                      //           color: Colors.white,
+                      //           shape: BoxShape.circle,
+                      //         ),
+                      //         child: const Icon(
+                      //           Icons.remove,
+                      //           color: Color(0xFFFF4444),
+                      //         ),
+                      //       ),
+                      //     ),
+                      //     SizedBox(width: screenWidth * 0.04),
+                      //     Text(
+                      //       '$passengers',
+                      //       style: GoogleFonts.lexend(
+                      //         fontSize: screenWidth * 0.05,
+                      //         fontWeight: FontWeight.w600,
+                      //         color: Colors.white,
+                      //       ),
+                      //     ),
+                      //     SizedBox(width: screenWidth * 0.04),
+                      //     GestureDetector(
+                      //       onTap: incrementPassengers,
+                      //       child: Container(
+                      //         width: screenWidth * 0.1,
+                      //         height: screenWidth * 0.1,
+                      //         decoration: const BoxDecoration(
+                      //           color: Colors.white,
+                      //           shape: BoxShape.circle,
+                      //         ),
+                      //         child: const Icon(
+                      //           Icons.add,
+                      //           color: Color(0xFFFF4444),
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
+                      // SizedBox(height: screenHeight * 0.025),
 
                       // ================= SEARCH BUTTON =================
                       Center(
@@ -941,8 +950,6 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ),
       ),
-
-      
     );
   }
 }

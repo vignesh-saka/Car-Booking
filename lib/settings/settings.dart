@@ -1,3 +1,4 @@
+import 'package:bookmycar/settings/confirm_password_screen.dart';
 import 'package:bookmycar/settings/privacy_policy.dart';
 import 'package:bookmycar/settings/termsandconditions.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,156 @@ import 'package:bookmycar/auth/login_screen.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
+
+  void _showPasswordDialog(BuildContext context) {
+    final TextEditingController passwordController = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(
+                "Confirm Password",
+                style: GoogleFonts.lexend(fontWeight: FontWeight.w600),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "For security reasons, please enter your password to delete your account.",
+                    style: GoogleFonts.lexend(fontSize: 14),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: "Password",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
+                  child: Text("Cancel", style: GoogleFonts.lexend()),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF3B30),
+                  ),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (passwordController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Password cannot be empty"),
+                              ),
+                            );
+                            return;
+                          }
+
+                          setState(() => isLoading = true);
+
+                          await _reauthenticateAndDelete(
+                            context,
+                            passwordController.text.trim(),
+                          );
+
+                          setState(() => isLoading = false);
+                        },
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          "Confirm Delete",
+                          style: GoogleFonts.lexend(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _reauthenticateAndDelete(
+    BuildContext context,
+    String password,
+  ) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null || user.email == null) return;
+
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+
+      // 🔐 Re-authenticate user
+      await user.reauthenticateWithCredential(credential);
+
+      // 🔥 Delete Firestore data
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .delete();
+
+      // 🔥 Delete Firebase Auth account
+      await user.delete();
+
+      Navigator.pop(context); // close password dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Account deleted successfully",
+            style: GoogleFonts.lexend(),
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      Navigator.pop(context);
+
+      String message = "Something went wrong";
+
+      if (e.code == 'wrong-password') {
+        message = "Incorrect password";
+      } else if (e.code == 'requires-recent-login') {
+        message = "Please login again and try";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message, style: GoogleFonts.lexend()),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +201,12 @@ class SettingsPage extends StatelessWidget {
                     screenWidth: screenWidth,
                     screenHeight: screenHeight,
                     isDanger: true,
-                    onTap: () => _showDeleteAccountDialog(context),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ConfirmPasswordScreen(),
+                      ),
+                    ),
                   ),
                   _buildMenuItem(
                     icon: Icons.description_outlined,
@@ -144,82 +300,82 @@ class SettingsPage extends StatelessWidget {
   }
 
   // ---------------- DELETE CONFIRMATION ----------------
-  void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(
-          "Delete Account",
-          style: GoogleFonts.lexend(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          "Are you sure you want to delete your account?\nThis action cannot be undone.",
-          style: GoogleFonts.lexend(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("No", style: GoogleFonts.lexend()),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _deleteAccount(context);
-            },
-            child: Text(
-              "Yes",
-              style: GoogleFonts.lexend(
-                color: const Color(0xFFFF4444),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _showDeleteAccountDialog(BuildContext context) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => AlertDialog(
+  //       title: Text(
+  //         "Delete Account",
+  //         style: GoogleFonts.lexend(fontWeight: FontWeight.w600),
+  //       ),
+  //       content: Text(
+  //         "Are you sure you want to delete your account?\nThis action cannot be undone.",
+  //         style: GoogleFonts.lexend(),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: Text("No", style: GoogleFonts.lexend()),
+  //         ),
+  //         TextButton(
+  //           onPressed: () async {
+  //             Navigator.pop(context);
+  //             await _deleteAccount(context);
+  //           },
+  //           child: Text(
+  //             "Yes",
+  //             style: GoogleFonts.lexend(
+  //               color: const Color(0xFFFF4444),
+  //               fontWeight: FontWeight.w600,
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // ---------------- DELETE ACCOUNT LOGIC ----------------
-  Future<void> _deleteAccount(BuildContext context) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+  // Future<void> _deleteAccount(BuildContext context) async {
+  //   try {
+  //     final user = FirebaseAuth.instance.currentUser;
+  //     if (user == null) return;
 
-      // 🔥 Delete Firestore user document
-      await FirebaseFirestore.instance
-          .collection("users")
-          .doc(user.uid)
-          .delete();
+  //     // 🔥 Delete Firestore user document
+  //     await FirebaseFirestore.instance
+  //         .collection("users")
+  //         .doc(user.uid)
+  //         .delete();
 
-      // 🔥 Delete Firebase Auth account
-      await user.delete();
+  //     // 🔥 Delete Firebase Auth account
+  //     await user.delete();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Account deleted successfully",
-            style: GoogleFonts.lexend(),
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text(
+  //           "Account deleted successfully",
+  //           style: GoogleFonts.lexend(),
+  //         ),
+  //         backgroundColor: Colors.green,
+  //       ),
+  //     );
 
-      // 🔄 Navigate to Login
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (_) => false,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Failed to delete account: $e",
-            style: GoogleFonts.lexend(),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  //     // 🔄 Navigate to Login
+  //     Navigator.pushAndRemoveUntil(
+  //       context,
+  //       MaterialPageRoute(builder: (_) => const LoginScreen()),
+  //       (_) => false,
+  //     );
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text(
+  //           "Failed to delete account: $e",
+  //           style: GoogleFonts.lexend(),
+  //         ),
+  //         backgroundColor: Colors.red,
+  //       ),
+  //     );
+  //   }
+  // }
 }

@@ -81,7 +81,6 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
     }
   }
 
-
   void onRideSelected(RideData ride) {
     Navigator.push(
       context,
@@ -228,14 +227,14 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                               Icon(
                                 Icons.search_off,
                                 size: screenWidth * 0.2,
-                                color: Colors.grey[400],
+                                color: Colors.black,
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Text(
                                 'No rides available',
                                 style: GoogleFonts.lexend(
                                   fontSize: screenWidth * 0.045,
-                                  color: Colors.grey[600],
+                                  color: Colors.black,
                                 ),
                               ),
                             ],

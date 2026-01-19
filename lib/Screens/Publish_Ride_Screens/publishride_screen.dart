@@ -236,7 +236,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
-      lastDate: DateTime(2025, 12, 31),
+      lastDate: DateTime(2100, 12, 31),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(primary: Color(0xFFFF4444)),
@@ -291,6 +291,28 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
     });
   }
 
+  void clearFields() {
+    setState(() {
+      riderNameController.clear();
+      phoneController.clear();
+      fromCityController.clear();
+      toCityController.clear();
+      dateController.clear();
+      pickupTimeController.clear();
+      dropTimeController.clear();
+      priceController.text = "500";
+      descriptionController.clear();
+
+      passengers = 1;
+      fromLatLng = null;
+      toLatLng = null;
+      fromSuggestions.clear();
+      toSuggestions.clear();
+      showFromSuggestions = false;
+      showToSuggestions = false;
+    });
+  }
+
   void handleSubmit() {
     // existing save flow handled by saveRideToFirebase
     // kept for compatibility
@@ -305,6 +327,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
         ),
       ),
     );
+    clearFields();
   }
 
   @override
@@ -392,6 +415,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
           ),
         ),
       );
+      clearFields();
     } catch (e) {
       ScaffoldMessenger.of(
         context,
