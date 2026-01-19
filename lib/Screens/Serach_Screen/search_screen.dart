@@ -13,6 +13,7 @@ import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:bookmycar/widgets/notification_icon.dart';
 
 /// SearchScreen with Google Places Autocomplete (India-only) for From/To fields.
 /// Autocomplete triggers after 3 characters and uses a session token.
@@ -664,15 +665,24 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Center(
-                        child: Text(
-                          'Find a Ride?',
-                          style: GoogleFonts.lexend(
-                            fontSize: screenWidth * 0.065,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Center(
+                            child: Text(
+                              'Find a Ride?',
+                              style: GoogleFonts.lexend(
+                                fontSize: screenWidth * 0.065,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
-                        ),
+                          const Positioned(
+                            right: 0,
+                            child: NotificationIcon(),
+                          ),
+                        ],
                       ),
                       SizedBox(height: screenHeight * 0.025),
                       Text(

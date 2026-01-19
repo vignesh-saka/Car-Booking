@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:bookmycar/widgets/notification_icon.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Function(int)? onTabChange;
@@ -192,15 +193,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   children: [
                     // Title
-                    Center(
-                      child: Text(
-                        'Profile',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.06,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                    // Title with Notification Icon
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Center(
+                          child: Text(
+                            'Profile',
+                            style: GoogleFonts.lexend(
+                              fontSize: screenWidth * 0.06,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
+                        const Positioned(
+                          right: 0,
+                          child: NotificationIcon(),
+                        ),
+                      ],
                     ),
                     SizedBox(height: screenHeight * 0.03),
 

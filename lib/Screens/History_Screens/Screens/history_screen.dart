@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/ride.dart';
 import 'ride_details_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bookmycar/widgets/notification_icon.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -182,14 +183,25 @@ class _HistoryScreenState extends State<HistoryScreen>
               SizedBox(height: screenHeight * 0.02),
 
               // Title (same UI)
-              Text(
-                'History',
-                style: GoogleFonts.lexend(
-                  fontSize: screenWidth * 0.06,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                // Title with Notification Icon
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 40), // Balance the icon
+                      Text(
+                        'History',
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.06,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const NotificationIcon(),
+                    ],
+                  ),
                 ),
-              ),
 
               SizedBox(height: screenHeight * 0.02),
 

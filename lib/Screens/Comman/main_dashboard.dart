@@ -10,16 +10,18 @@ import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.
 import 'package:bookmycar/Screens/Serach_Screen/search_screen.dart';
 import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
+import 'package:bookmycar/Screens/notification_screen.dart';
 
 class MainDashboard extends StatefulWidget {
-  const MainDashboard({super.key});
+  final int initialIndex;
+  const MainDashboard({super.key, this.initialIndex = 2}); // Default to Search
 
   @override
   State<MainDashboard> createState() => _MainDashboardState();
 }
 
 class _MainDashboardState extends State<MainDashboard> {
-  int _selectedIndex = 2; // Search
+  late int _selectedIndex;
   bool _hasInternet = true;
 
   late final List<Widget> _screens;
@@ -28,12 +30,16 @@ class _MainDashboardState extends State<MainDashboard> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
 
+
+
+//...
     _screens = [
       PublishRideScreen(
         onPublishSuccess: () {
           setState(() {
-            _selectedIndex = 3; // History
+            _selectedIndex = 3; // History (shifted back to 3)
           });
         },
       ),
@@ -45,11 +51,12 @@ class _MainDashboardState extends State<MainDashboard> {
           });
         },
       ),
-      const HistoryScreen(),
+      const HistoryScreen(),      // Revert to Index 3
       ProfileScreen(
         onTabChange: (index) {
-          if (_selectedIndex == index) return;
-          setState(() => _selectedIndex = index);
+          // Profile needs to handle the shifted index if it navigates
+           if (_selectedIndex == index) return;
+           setState(() => _selectedIndex = index);
         },
       ),
     ];

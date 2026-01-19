@@ -3,6 +3,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishsucess_screen.dart';
+import 'package:bookmycar/controllers/notification_controller.dart';
+import 'package:bookmycar/widgets/notification_icon.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:firebase_storage/firebase_storage.dart';
@@ -398,6 +400,14 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
         to: toCityController.text.trim(),
         date: dateController.text.trim(),
         pickupTime: pickupTimeController.text.trim(),
+      );
+
+      // 🔔 Trigger In-App Notification
+      await NotificationController().sendNotification(
+        toUserId: FirebaseAuth.instance.currentUser!.uid,
+        title: "Ride Published",
+        body: "Your ride from ${fromCityController.text} to ${toCityController.text} is live.",
+        type: "ride_published",
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -817,15 +827,24 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Center(
-                                child: Text(
-                                  "Publish A Ride?",
-                                  style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.065,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Center(
+                                    child: Text(
+                                      "Publish A Ride?",
+                                      style: GoogleFonts.lexend(
+                                        fontSize: screenWidth * 0.065,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  const Positioned(
+                                    right: 0,
+                                    child: NotificationIcon(),
+                                  ),
+                                ],
                               ),
                               SizedBox(height: screenHeight * 0.025),
 

@@ -5,6 +5,7 @@ import 'package:bookmycar/Screens/My_Booking_Screens/Model/models.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/booking_card.dart';
+import 'package:bookmycar/widgets/notification_icon.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -513,12 +514,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               child: Column(
                 children: [
                   SizedBox(height: screenHeight * 0.02),
-                  Text(
-                    'My Bookings',
-                    style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.06,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 40), // Balance the icon
+                        Text(
+                          'My Bookings',
+                          style: GoogleFonts.lexend(
+                            fontSize: screenWidth * 0.06,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const NotificationIcon(),
+                      ],
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.02),

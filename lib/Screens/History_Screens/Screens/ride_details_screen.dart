@@ -5,7 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/ride.dart';
 import '../models/ride_request.dart';
+import '../models/ride_request.dart';
 import '../widgets/request_item.dart';
+import 'package:bookmycar/controllers/notification_controller.dart';
 
 class RideDetailsScreen extends StatefulWidget {
   final Ride ride;
@@ -103,6 +105,11 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                   .toString()
                   .trim();
 
+              // 👇 passengerUid
+              final String passengerUid = (data['passengerUid'] ?? '')
+                  .toString()
+                  .trim();
+
               // Use phone as unique key if present
               final String uniqueKey = phone.isNotEmpty ? phone : '$name|$age';
 
@@ -122,6 +129,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                   status: status.isNotEmpty ? status : 'pending',
                   groupSize: groupSize,
                   bookingId: bookingId.isNotEmpty ? bookingId : null,
+                  passengerUid: passengerUid.isNotEmpty ? passengerUid : null,
                 ),
               );
             }
@@ -373,6 +381,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
         status: 'accepted',
         age: requests[index].age,
         groupSize: requests[index].groupSize,
+        passengerUid: requests[index].passengerUid,
       );
     });
 
@@ -381,6 +390,16 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
     try {
       await _upsertRideRequestToFirestore(req, 'accepted');
       await _updateBookingStatusForPassenger(req, 'accepted');
+
+      // 🔔 Notify Passenger
+      if (req.passengerUid != null && req.passengerUid!.isNotEmpty) {
+        await NotificationController().sendNotification(
+          toUserId: req.passengerUid!,
+          title: "Ride Request Accepted",
+          body: "Your ride request has been accepted by ${widget.ride.driverName}.",
+          type: "booking_status",
+        );
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -395,6 +414,8 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
           phone: requests[index].phone,
           status: 'pending',
           age: requests[index].age,
+          groupSize: requests[index].groupSize,
+          passengerUid: requests[index].passengerUid,
         );
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -417,6 +438,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
         status: 'rejected',
         age: requests[index].age,
         groupSize: requests[index].groupSize,
+        passengerUid: requests[index].passengerUid,
       );
     });
 
@@ -425,6 +447,16 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
     try {
       await _upsertRideRequestToFirestore(req, 'rejected');
       await _updateBookingStatusForPassenger(req, 'rejected');
+
+      // 🔔 Notify Passenger
+      if (req.passengerUid != null && req.passengerUid!.isNotEmpty) {
+        await NotificationController().sendNotification(
+          toUserId: req.passengerUid!,
+          title: "Ride Request Rejected",
+          body: "Your ride request has been rejected by ${widget.ride.driverName}.",
+          type: "booking_status",
+        );
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -439,6 +471,8 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
           phone: requests[index].phone,
           status: 'pending',
           age: requests[index].age,
+          groupSize: requests[index].groupSize,
+          passengerUid: requests[index].passengerUid,
         );
       });
       ScaffoldMessenger.of(context).showSnackBar(

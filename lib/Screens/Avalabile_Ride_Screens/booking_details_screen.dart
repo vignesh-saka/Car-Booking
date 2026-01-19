@@ -1,5 +1,6 @@
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.dart';
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/bookingsucess_screen.dart';
+import 'package:bookmycar/controllers/notification_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -309,6 +310,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           toCity: widget.ride.toCity,
           date: widget.ride.date,
           departureTime: widget.ride.departureTime,
+        );
+
+        // 🔔 Trigger In-App Notification to DRIVER
+        await NotificationController().sendNotification(
+          toUserId: widget.ride.driverId,
+          title: "New Booking Request",
+          body: "You have a new booking request from ${passengers[0].name}",
+          type: "booking_request",
         );
       } catch (e, st) {
         debugPrint('Failed to create ride_request: $e\n$st');

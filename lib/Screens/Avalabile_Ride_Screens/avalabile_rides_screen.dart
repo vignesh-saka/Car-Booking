@@ -263,6 +263,7 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                             price: int.tryParse(data["price"].toString()) ?? 0,
                             date: data["date"],
                             description: data["description"] ?? '',
+                            driverId: data["createdBy"] ?? '',
                           );
 
                           return RideCard(
@@ -302,6 +303,7 @@ class RideData {
   final int price;
   final String date;
   final String description;
+  final String driverId; // Added driverId
 
   RideData({
     this.id,
@@ -316,6 +318,7 @@ class RideData {
     required this.price,
     required this.date,
     this.description = '',
+    required this.driverId,
   });
 
   int get availableSeats => totalSeats - bookedSeats;

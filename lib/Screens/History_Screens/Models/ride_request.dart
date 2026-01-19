@@ -5,14 +5,16 @@ class RideRequest {
   final String? age;
   final int groupSize; // 👈 group size
   final String? bookingId; 
+  final String? passengerUid; // Added UID
 
-  const RideRequest({
+  RideRequest({
     required this.name,
     required this.phone,
-    this.status = 'pending',
+    required this.status,
     this.age,
     this.groupSize = 1, // default 1 passenger
     this.bookingId,
+    this.passengerUid,
   });
 
   factory RideRequest.fromMap(Map<String, dynamic> data) {
@@ -28,6 +30,8 @@ class RideRequest {
 
     final bookingIdRaw = (data['bookingId'] ?? '').toString().trim();
 
+    final String? passengerUid = data['passengerUid']?.toString();
+
     return RideRequest(
       name: (data['passengerName'] ?? data['name'] ?? '').toString(),
       phone: (data['passengerPhone'] ?? data['phone'] ?? '').toString(),
@@ -35,6 +39,7 @@ class RideRequest {
       status: (data['status'] ?? 'pending').toString(),
       groupSize: parsedGroupSize,
       bookingId: bookingIdRaw.isEmpty ? null : bookingIdRaw,
+      passengerUid: passengerUid,
     );
   }
 
@@ -46,6 +51,7 @@ class RideRequest {
       'status': status,
       'groupSize': groupSize,
       'bookingId': bookingId,
+      'passengerUid': passengerUid,
     };
   }
 }
