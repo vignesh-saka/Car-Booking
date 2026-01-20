@@ -15,23 +15,24 @@ class NotificationScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.red,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        centerTitle: true,
         title: Text(
           "Notifications",
           style: GoogleFonts.lexend(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Colors.white,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.done_all, color: Color(0xFFFF3B30)),
+            icon: const Icon(Icons.done_all, color: Colors.white),
             tooltip: "Clear all notifications",
             onPressed: () async {
               // Confirm deletion

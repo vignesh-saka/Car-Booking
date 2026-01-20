@@ -26,6 +26,10 @@ class _ConfirmPasswordScreenState extends State<ConfirmPasswordScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFF3B30),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         centerTitle: true,
         title: Text(
           "Confirm Password",

@@ -84,7 +84,8 @@ class NotificationController with ChangeNotifier {
     AndroidNotification? android = message.notification?.android;
 
     if (notification != null && android != null) {
-      // Use MaterialBanner for persistent in-app notification
+      // In-app Notification (Banner) - Commented out as per user request
+      /*
       final context = navigatorKey?.currentContext;
       if (context != null) {
         ScaffoldMessenger.of(context).showMaterialBanner(
@@ -126,6 +127,7 @@ class NotificationController with ChangeNotifier {
           ),
         );
       }
+      */
       
       // Still show system notification for tray (optional, but good for history)
       await _localNotificationsPlugin.show(
