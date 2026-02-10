@@ -2,6 +2,7 @@ import 'package:bookmycar/Screens/Avalabile_Ride_Screens/ride_detail_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:math' show cos, sqrt, asin;
 
 class AvailableRidesScreen extends StatefulWidget {
   final String from;
@@ -53,10 +54,17 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
   Stream<QuerySnapshot> fetchRides() {
     return FirebaseFirestore.instance
         .collection("rides")
-        .where("fromCity", isEqualTo: widget.from)
-        .where("toCity", isEqualTo: widget.to)
         .where("date", isEqualTo: selectedDate)
         .snapshots();
+  }
+
+  /// Haversine Formula: Calculate distance (in km) between two LatLng points
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const p = 0.017453292519943295; // Math.PI / 180
+    final a = 0.5 -
+        cos((lat2 - lat1) * p) / 2 +
+        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 
   /// 🔥 Calendar Picker
@@ -221,37 +229,73 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                       }
 
                       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Center(
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.search_off,
-                                size: screenWidth * 0.2,
-                                color: Colors.black,
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Text(
-                                'No rides available',
-                                style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.045,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
+                        return _buildNoRidesFound(screenWidth, screenHeight);
                       }
 
                       final docs = snapshot.data!.docs;
+                      // ---------------- FILTERING LOGIC ----------------
+                      final List<DocumentSnapshot> filteredDocs = docs.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+
+                        // 1. Get ride coordinates
+                        final rideFromLat = data['fromLatLng']?['lat'];
+                        final rideFromLng = data['fromLatLng']?['lng'];
+                        final rideToLat = data['toLatLng']?['lat'];
+                        final rideToLng = data['toLatLng']?['lng'];
+
+                        // 2. Check if we have VALID search coordinates & ride coordinates
+                        bool hasSearchCoords = (widget.fromLat != null &&
+                            widget.fromLng != null &&
+                            widget.toLat != null &&
+                            widget.toLng != null);
+
+                        bool hasRideCoords = (rideFromLat != null &&
+                            rideFromLng != null &&
+                            rideToLat != null &&
+                            rideToLng != null);
+
+                        if (hasSearchCoords && hasRideCoords) {
+                          // --- DISTANCE BASED FILTERING (60km range) ---
+                          double startDist = _calculateDistance(
+                            widget.fromLat!,
+                            widget.fromLng!,
+                            rideFromLat,
+                            rideFromLng,
+                          );
+                          double endDist = _calculateDistance(
+                            widget.toLat!,
+                            widget.toLng!,
+                            rideToLat,
+                            rideToLng,
+                          );
+
+                          // Check if both start & end are within 60km
+                          return (startDist <= 60.0 && endDist <= 60.0);
+                        } else {
+                          // --- FALLBACK: EXACT TEXT MATCHING ---
+                          // use case-insensitive or exact match? keeping exact for now to match original logic
+                          // but trimming to be safe
+                          String rFrom = (data["fromCity"] ?? "").toString().trim();
+                          String rTo = (data["toCity"] ?? "").toString().trim();
+                          String sFrom = widget.from.trim();
+                          String sTo = widget.to.trim();
+
+                          return rFrom.toLowerCase() == sFrom.toLowerCase() &&
+                                 rTo.toLowerCase() == sTo.toLowerCase();
+                        }
+                      }).toList();
+
+                      if (filteredDocs.isEmpty) {
+                        return _buildNoRidesFound(screenWidth, screenHeight);
+                      }
 
                       return ListView.builder(
-                        itemCount: docs.length,
+                        itemCount: filteredDocs.length,
                         itemBuilder: (context, index) {
-                          final data =
-                              docs[index].data() as Map<String, dynamic>;
+                          final data = filteredDocs[index].data() as Map<String, dynamic>;
 
                           RideData ride = RideData(
-                            id: docs[index].id,
+                            id: filteredDocs[index].id,
                             departureTime: data["pickupTime"],
                             arrivalTime: data["dropTime"],
                             fromCity: data["fromCity"],
@@ -284,6 +328,38 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
       ),
 
       // ---------------- BOTTOM NAV ----------------
+    );
+  }
+
+  Widget _buildNoRidesFound(double screenWidth, double screenHeight) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: screenWidth * 0.2,
+            color: Colors.grey[400],
+          ),
+          SizedBox(height: screenHeight * 0.02),
+          Text(
+            'No rides found',
+            style: GoogleFonts.lexend(
+              fontSize: screenWidth * 0.045,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+             'Try changing the date or location',
+             style: GoogleFonts.lexend(
+               fontSize: screenWidth * 0.035,
+               color: Colors.grey[500],
+             ),
+          ),
+        ],
+      ),
     );
   }
 }

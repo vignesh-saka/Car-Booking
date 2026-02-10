@@ -1,5 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:bookmycar/Screens/Comman/main_dashboard.dart';
 import 'package:bookmycar/Screens/notification_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,6 +38,7 @@ class NotificationController with ChangeNotifier {
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print('User granted permission');
       await _saveDeviceToken();
+      await _firebaseMessaging.subscribeToTopic('all_users');
     }
 
     // 2. Local Notifications Setup
@@ -198,10 +201,54 @@ class NotificationController with ChangeNotifier {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // Note: Actual Push Notification via FCM usually requires a Backend (Node.js/Cloud Functions)
-    // to listen to Firestore changes and send the FCM request to the device token.
-    // Client-side sending is not recommended for security (requires server key).
-    // optimizing for *User Objective*: We will simulate the "In App" notification via Firestore listener.
+    // 2. Fetch FCM Token of the recipient
+    if (toUserId.isNotEmpty) {
+       final userDoc = await FirebaseFirestore.instance.collection('users').doc(toUserId).get();
+       final token = userDoc.data()?['fcmToken'];
+       if (token != null) {
+          await sendPushMessage(token, title, body, type);
+       }
+    } else {
+        // Send to topic 'all_users' if userId is empty (broadcast)
+        await sendPushMessage('/topics/all_users', title, body, type);
+    }
+  }
+
+  // 🔥 Send Push via FCM Legacy API
+  // REPLACEMENT REQUIRED: Put your SERVER KEY here
+  final String _serverKey = '63717521520'; 
+
+  Future<void> sendPushMessage(String token, String title, String body, String type) async {
+    try {
+      await http.post(
+        Uri.parse('https://fcm.googleapis.com/fcm/send'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'key=$_serverKey',
+        },
+        body: jsonEncode(
+          <String, dynamic>{
+            'priority': 'high',
+            'data': <String, dynamic>{
+              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+              'status': 'done',
+              'type': type,
+              'body': body,
+              'title': title,
+            },
+            'notification': <String, dynamic>{
+              'title': title,
+              'body': body,
+              'android_channel_id': 'high_importance_channel',
+            },
+            'to': token,
+          },
+        ),
+      );
+      print("Push notification sent to $token");
+    } catch (e) {
+      print("Error sending push notification: $e");
+    }
   }
 
   // --- Fetch Unread Count ---
