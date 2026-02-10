@@ -3,7 +3,8 @@
 
 import 'dart:async';
 import 'dart:convert';
-// import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.dart';
 import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
@@ -50,11 +51,8 @@ class _SearchScreenState extends State<SearchScreen> {
   bool isSubmitting = false;
   bool isPublished = false;
 
-  // Backend data - replace with actual API call
-  List<RecentRide> recentRides = [
-    RecentRide(from: 'Hyderabad', to: 'Karimnagar'),
-    RecentRide(from: 'Karimnagar', to: 'Hyderabad'),
-  ];
+  // Backend data
+  List<RecentRide> recentRides = [];
 
   // Autocomplete state
   Timer? _debounceTimer;
@@ -86,6 +84,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _sessionToken = DateTime.now().millisecondsSinceEpoch.toString();
+    _fetchRecentSearches();
   }
 
   @override
@@ -131,6 +130,40 @@ class _SearchScreenState extends State<SearchScreen> {
       fromController.clear();
       toController.clear();
       dateController.clear();
+    });
+  }
+
+  void _swapLocations() {
+    setState(() {
+      // Swap Text
+      final tempText = fromController.text;
+      fromController.text = toController.text;
+      toController.text = tempText;
+
+      // Swap Coordinates
+      final tempLatLng = fromLatLng;
+      fromLatLng = toLatLng;
+      toLatLng = tempLatLng;
+
+      // Swap Place IDs
+      final tempPlaceId = _fromPlaceId;
+      _fromPlaceId = _toPlaceId;
+      _toPlaceId = tempPlaceId;
+
+      // Swap Locality/AdminArea
+      final tempLocality = _fromLocality;
+      _fromLocality = _toLocality;
+      _toLocality = tempLocality;
+
+      final tempAdminArea = _fromAdminArea;
+      _fromAdminArea = _toAdminArea;
+      _toAdminArea = tempAdminArea;
+
+      // Clear suggestions to avoid confusion
+      fromSuggestions.clear();
+      toSuggestions.clear();
+      showFromSuggestions = false;
+      showToSuggestions = false;
     });
   }
 
@@ -204,6 +237,9 @@ class _SearchScreenState extends State<SearchScreen> {
       isPublished = false;
     });
 
+    // Save to Recents before navigating
+    await _saveRecentSearch();
+
     // Now actually navigate to results screen
     await Navigator.push(
       context,
@@ -226,7 +262,77 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       ),
     );
-    clearFields();
+    // clearFields(); // Optional: keep fields for better UX or clear them
+  }
+
+  // ------------------- Recent Searches Logic -------------------
+
+  Future<void> _fetchRecentSearches() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && doc.data()!.containsKey('recentSearches')) {
+        final List<dynamic> data = doc.data()!['recentSearches'];
+        setState(() {
+          recentRides = data.map((e) => RecentRide.fromJson(e)).toList();
+        });
+      } else {
+        setState(() {
+          recentRides = [];
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching recent searches: $e");
+    }
+  }
+
+  Future<void> _saveRecentSearch() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final newRide = RecentRide(
+      from: fromController.text,
+      to: toController.text,
+      fromPlaceId: _fromPlaceId,
+      toPlaceId: _toPlaceId,
+      fromLat: fromLatLng?.lat,
+      fromLng: fromLatLng?.lng,
+      toLat: toLatLng?.lat,
+      toLng: toLatLng?.lng,
+    );
+
+    try {
+      // Get current list
+      List<RecentRide> currentList = [...recentRides];
+
+      // Remove duplicates (same from & to)
+      currentList.removeWhere((r) =>
+          r.from.toLowerCase() == newRide.from.toLowerCase() &&
+          r.to.toLowerCase() == newRide.to.toLowerCase());
+
+      // Insert at beginning
+      currentList.insert(0, newRide);
+
+      // Keep max 5
+      if (currentList.length > 5) {
+        currentList = currentList.sublist(0, 5);
+      }
+
+      // Update Local State
+      setState(() {
+        recentRides = currentList;
+      });
+
+      // Update Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'recentSearches': currentList.map((e) => e.toJson()).toList(),
+      }, SetOptions(merge: true));
+
+    } catch (e) {
+      debugPrint("Error saving recent search: $e");
+    }
   }
 
   // Bottom nav
@@ -746,14 +852,48 @@ class _SearchScreenState extends State<SearchScreen> {
 
                       SizedBox(height: screenHeight * 0.02),
 
-                      // ================= TO FIELD =================
-                      Text(
-                        'To',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.035,
-                          color: Colors.white,
-                        ),
+                      // ================= SWAP BUTTON & TO FIELD =================
+                      // ================= SWAP BUTTON & TO FIELD =================
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'To',
+                            style: GoogleFonts.lexend(
+                              fontSize: screenWidth * 0.035,
+                              color: Colors.white,
+                            ),
+                          ),
+                          // Swap Button (Right Side)
+                          Container(
+                            width: 32, // explicit small size
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              onPressed: _swapLocations,
+                              icon: const Icon(
+                                Icons.swap_vert,
+                                color: Color(0xFFFF3B30),
+                                size: 18,
+                              ),
+                              tooltip: 'Swap Locations',
+                              padding: EdgeInsets.zero, // remove padding
+                              constraints: const BoxConstraints(),
+                            ),
+                          ),
+                        ],
                       ),
+                      
                       SizedBox(height: 8),
                       TextField(
                         controller: toController,
@@ -947,15 +1087,36 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
 
               // ================= RECENTS =================
-              // if (recentRides.isNotEmpty)
-              //   Padding(
-              //     padding: EdgeInsets.all(screenWidth * 0.06),
-              //     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              //       Text('Recents', style: GoogleFonts.lexend(fontSize: screenWidth * 0.05, fontWeight: FontWeight.w600, color: Colors.black87)),
-              //       SizedBox(height: screenHeight * 0.015),
-              //       ...recentRides.map((ride) => RecentRideItem(ride: ride, screenWidth: screenWidth, screenHeight: screenHeight)),
-              //     ]),
-              //   ),
+              if (recentRides.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.all(screenWidth * 0.06),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Recents', style: GoogleFonts.lexend(fontSize: screenWidth * 0.05, fontWeight: FontWeight.w600, color: Colors.black87)),
+                    SizedBox(height: screenHeight * 0.015),
+                    ...recentRides.map(
+                      (ride) => RecentRideItem(
+                        ride: ride,
+                        screenWidth: screenWidth,
+                        screenHeight: screenHeight,
+                        onTap: () {
+                          // Populate fields
+                          setState(() {
+                            fromController.text = ride.from;
+                            toController.text = ride.to;
+                            _fromPlaceId = ride.fromPlaceId;
+                            _toPlaceId = ride.toPlaceId;
+                            if (ride.fromLat != null && ride.fromLng != null) {
+                              fromLatLng = LatLngPair(ride.fromLat!, ride.fromLng!);
+                            }
+                            if (ride.toLat != null && ride.toLng != null) {
+                              toLatLng = LatLngPair(ride.toLat!, ride.toLng!);
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  ]),
+                ),
             ],
           ),
         ),
@@ -970,93 +1131,137 @@ class _SearchScreenState extends State<SearchScreen> {
 class RecentRide {
   final String from;
   final String to;
-  RecentRide({required this.from, required this.to});
+  final String? fromPlaceId;
+  final String? toPlaceId;
+  final double? fromLat;
+  final double? fromLng;
+  final double? toLat;
+  final double? toLng;
 
-  factory RecentRide.fromJson(Map<String, dynamic> json) =>
-      RecentRide(from: json['from'], to: json['to']);
+  RecentRide({
+    required this.from,
+    required this.to,
+    this.fromPlaceId,
+    this.toPlaceId,
+    this.fromLat,
+    this.fromLng,
+    this.toLat,
+    this.toLng,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'from': from,
+        'to': to,
+        'fromPlaceId': fromPlaceId,
+        'toPlaceId': toPlaceId,
+        'fromLat': fromLat,
+        'fromLng': fromLng,
+        'toLat': toLat,
+        'toLng': toLng,
+      };
+
+  factory RecentRide.fromJson(Map<String, dynamic> json) => RecentRide(
+        from: json['from'] ?? '',
+        to: json['to'] ?? '',
+        fromPlaceId: json['fromPlaceId'],
+        toPlaceId: json['toPlaceId'],
+        fromLat: json['fromLat'],
+        fromLng: json['fromLng'],
+        toLat: json['toLat'],
+        toLng: json['toLng'],
+      );
 }
 
 class RecentRideItem extends StatelessWidget {
   final RecentRide ride;
   final double screenWidth;
   final double screenHeight;
+  final VoidCallback onTap;
 
   const RecentRideItem({
     super.key,
     required this.ride,
     required this.screenWidth,
     required this.screenHeight,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: screenHeight * 0.012),
-      padding: EdgeInsets.all(screenWidth * 0.04),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.history,
-            color: Colors.grey[600],
-            size: screenWidth * 0.06,
-          ),
-          SizedBox(width: screenWidth * 0.03),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'From',
-                  style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.03,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                Text(
-                  ride.from,
-                  style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.038,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: screenHeight * 0.012),
+        padding: EdgeInsets.all(screenWidth * 0.04),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.history,
+              color: Colors.grey[600],
+              size: screenWidth * 0.06,
             ),
-          ),
-          Icon(
-            Icons.arrow_forward,
-            color: Colors.grey[400],
-            size: screenWidth * 0.05,
-          ),
-          SizedBox(width: screenWidth * 0.04),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'To',
-                  style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.03,
-                    color: Colors.grey[600],
+            SizedBox(width: screenWidth * 0.03),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'From',
+                    style: GoogleFonts.lexend(
+                      fontSize: screenWidth * 0.03,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                ),
-                Text(
-                  ride.to,
-                  style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.038,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                  Text(
+                    ride.from.split(',')[0].trim(), // Only first part
+                    style: GoogleFonts.lexend(
+                      fontSize: screenWidth * 0.038,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            Icon(
+              Icons.arrow_forward,
+              color: Colors.grey[400],
+              size: screenWidth * 0.05,
+            ),
+            SizedBox(width: screenWidth * 0.04),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'To',
+                    style: GoogleFonts.lexend(
+                      fontSize: screenWidth * 0.03,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  Text(
+                    ride.to.split(',')[0].trim(), // Only first part
+                    style: GoogleFonts.lexend(
+                      fontSize: screenWidth * 0.038,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
