@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -38,7 +39,9 @@ class NotificationController with ChangeNotifier {
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print('User granted permission');
       await _saveDeviceToken();
-      await _firebaseMessaging.subscribeToTopic('all_users');
+      if (!kIsWeb) {
+        await _firebaseMessaging.subscribeToTopic('all_users');
+      }
     }
 
     // 2. Local Notifications Setup
@@ -63,9 +66,12 @@ class NotificationController with ChangeNotifier {
       importance: Importance.max,
     );
 
-    await _localNotificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+    if (!kIsWeb) {
+      await _localNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+    }
 
     // 3. Foreground Messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {

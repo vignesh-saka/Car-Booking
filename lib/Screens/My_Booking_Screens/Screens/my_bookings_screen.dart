@@ -442,9 +442,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
     final currentUser = FirebaseAuth.instance.currentUser;
     final uid = currentUser?.uid;
 
@@ -452,38 +449,43 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       return Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFF3B30),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(25),
-                bottomRight: Radius.circular(25),
-              ),
-            ),
-            child: Column(
-              children: [
-                SizedBox(height: screenHeight * 0.02),
-                Text(
-                  'My Bookings',
-                  style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.06,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFF3B30),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(25),
+                    bottomRight: Radius.circular(25),
                   ),
                 ),
-                SizedBox(height: screenHeight * 0.02),
-                Padding(
-                  padding: EdgeInsets.all(screenWidth * 0.06),
-                  child: Text(
-                    'Please sign in to view your bookings.',
-                    style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.04,
-                      color: Colors.white,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    Text(
+                      'My Bookings',
+                      style: GoogleFonts.lexend(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        'Please sign in to view your bookings.',
+                        style: GoogleFonts.lexend(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -499,193 +501,160 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: StreamBuilder<QuerySnapshot>(
-          stream: bookingsStream,
-          builder: (context, snapshot) {
-            Widget headerAndTabs = Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFF3B30),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(25),
-                  bottomRight: Radius.circular(25),
-                ),
-              ),
-              child: Column(
-                children: [
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const SizedBox(width: 40), // Balance the icon
-                        Text(
-                          'My Bookings',
-                          style: GoogleFonts.lexend(
-                            fontSize: screenWidth * 0.06,
-                            fontWeight: FontWeight.w600,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: bookingsStream,
+              builder: (context, snapshot) {
+                Widget headerAndTabs = Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B30),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(25),
+                      bottomRight: Radius.circular(25),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const SizedBox(width: 40), // Balance the icon
+                            Text(
+                              'My Bookings',
+                              style: GoogleFonts.lexend(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const NotificationIcon(),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 40),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: TabBar(
+                          controller: _tabController,
+                          indicator: BoxDecoration(
                             color: Colors.white,
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          dividerColor: Colors.transparent,
+                          labelColor: Colors.black,
+                          unselectedLabelColor: Colors.black54,
+                          labelStyle: GoogleFonts.lexend(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                          unselectedLabelStyle: GoogleFonts.lexend(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 16,
+                          ),
+                          tabs: const [
+                            Tab(text: 'Booked'),
+                            Tab(text: 'All Bookings'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                );
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Column(
+                    children: [
+                      headerAndTabs,
+                      const Expanded(
+                        child: Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Column(
+                    children: [
+                      headerAndTabs,
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            'Error loading bookings',
+                            style: GoogleFonts.lexend(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                        const NotificationIcon(),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Container(
-                    margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicator: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
                       ),
-                      dividerColor: Colors.transparent,
-                      labelColor: Colors.black,
-                      unselectedLabelColor: Colors.black54,
-                      labelStyle: GoogleFonts.lexend(
-                        fontWeight: FontWeight.w600,
-                        fontSize: screenWidth * 0.04,
-                      ),
-                      unselectedLabelStyle: GoogleFonts.lexend(
-                        fontWeight: FontWeight.w400,
-                        fontSize: screenWidth * 0.04,
-                      ),
-                      tabs: const [
-                        Tab(text: 'Booked'),
-                        Tab(text: 'All Bookings'),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                ],
-              ),
-            );
+                    ],
+                  );
+                }
 
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Column(
-                children: [
-                  headerAndTabs,
-                  const Expanded(
-                    child: Center(
-                      child: CircularProgressIndicator(color: Colors.white),
+                final docs = snapshot.data?.docs ?? [];
+                final List<Booking> allBookings = docs
+                    .map((d) => _bookingFromDoc(d))
+                    .toList();
+
+                final List<Booking> bookedBookings = allBookings
+                    .where((b) => !b.isCompleted)
+                    .toList();
+                final List<Booking> completedBookings = allBookings
+                    .where((b) => b.isCompleted)
+                    .toList();
+
+                return Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B30),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(25),
+                      bottomRight: Radius.circular(25),
                     ),
                   ),
-                ],
-              );
-            }
-
-            if (snapshot.hasError) {
-              return Column(
-                children: [
-                  headerAndTabs,
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Error loading bookings',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.04,
-                          color: Colors.white,
+                  child: Column(
+                    children: [
+                      headerAndTabs,
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildBookingsList(bookedBookings),
+                            _buildBookingsList(completedBookings),
+                          ],
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              );
-            }
-
-            final docs = snapshot.data?.docs ?? [];
-            final List<Booking> allBookings = docs
-                .map((d) => _bookingFromDoc(d))
-                .toList();
-
-            // for (final doc in docs) {
-            //   final data = doc.data() as Map<String, dynamic>;
-            //   final status = (data['status'] ?? '').toString().toLowerCase();
-
-            //   final bool acceptEmailSent = data['acceptEmailSent'] == true;
-            //   final bool rejectEmailSent = data['rejectEmailSent'] == true;
-
-            //   final booking = _bookingFromDoc(doc);
-
-            //   if (status == 'accepted' && !acceptEmailSent) {
-            //     _sendBookingAcceptedEmail(booking);
-            //     doc.reference.update({
-            //       'acceptEmailSent': true,
-            //       'acceptEmailSentAt': FieldValue.serverTimestamp(),
-            //     });
-            //   }
-
-            //   if (status == 'rejected' && !rejectEmailSent) {
-            //     _sendBookingRejectedEmail(booking);
-            //     doc.reference.update({
-            //       'rejectEmailSent': true,
-            //       'rejectEmailSentAt': FieldValue.serverTimestamp(),
-            //     });
-            //   }
-            // }
-
-            final List<Booking> bookedBookings = allBookings
-                .where((b) => !b.isCompleted)
-                .toList();
-            final List<Booking> completedBookings = allBookings
-                .where((b) => b.isCompleted)
-                .toList();
-
-            return Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFF3B30),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(25),
-                  bottomRight: Radius.circular(25),
-                ),
-              ),
-              child: Column(
-                children: [
-                  headerAndTabs,
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildBookingsList(
-                          bookedBookings,
-                          screenWidth,
-                          screenHeight,
-                        ),
-                        _buildBookingsList(
-                          completedBookings,
-                          screenWidth,
-                          screenHeight,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBookingsList(
-    List<Booking> bookings,
-    double screenWidth,
-    double screenHeight,
-  ) {
+  Widget _buildBookingsList(List<Booking> bookings) {
     if (bookings.isEmpty) {
       return Center(
         child: Text(
           'No bookings found',
           style: GoogleFonts.lexend(
-            fontSize: screenWidth * 0.04,
+            fontSize: 16,
             color: Colors.white,
           ),
         ),
@@ -693,16 +662,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     }
 
     return ListView.builder(
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.04,
-        vertical: screenHeight * 0.01,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 10,
       ),
       itemCount: bookings.length,
       itemBuilder: (context, index) {
         return BookingCard(
           booking: bookings[index],
-          screenWidth: screenWidth,
-          screenHeight: screenHeight,
         );
       },
     );

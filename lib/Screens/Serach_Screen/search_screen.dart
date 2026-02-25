@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -11,6 +12,7 @@ import 'package:bookmycar/Screens/History_Screens/Screens/history_screen.dart';
 import 'package:bookmycar/Screens/My_Booking_Screens/Screens/my_bookings_screen.dart';
 import 'package:bookmycar/Screens/Profile_Screen/profile_screen.dart';
 import 'package:bookmycar/Screens/Publish_Ride_Screens/publishride_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -78,7 +80,20 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _toAdminArea;
 
   // Google API key (you provided earlier). Restrict this in production.
-  static const String googleApiKey = 'AIzaSyCwizUugA6ySbo1PnnuNdPxGDXHPZAWtjY';
+  // Google API Key selection based on platform
+  String get googleApiKey {
+    if (kIsWeb) {
+      return 'AIzaSyBnmoEDuYaANSe4eO-2B4FUdW7-rJ5Ed_s';
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'AIzaSyC0YzYM2SMNib_QNRiqnILXWqieKZrXjqQ';
+      case TargetPlatform.iOS:
+        return 'AIzaSyCJqyEEOjscQ8gKXZoZWYGOiTUJH5N5FtQ';
+      default:
+        return 'AIzaSyC0YzYM2SMNib_QNRiqnILXWqieKZrXjqQ';
+    }
+  }
 
   @override
   void initState() {
@@ -412,43 +427,40 @@ class _SearchScreenState extends State<SearchScreen> {
     String input, {
     required bool isFrom,
   }) async {
-    final String baseUrl =
-        'https://maps.googleapis.com/maps/api/place/autocomplete/json';
     _sessionToken ??= DateTime.now().millisecondsSinceEpoch.toString();
 
-    final String request =
-        '$baseUrl'
-        '?input=${Uri.encodeComponent(input)}'
-        '&key=$googleApiKey'
-        '&types=geocode'
-        '&language=en'
-        '&components=country:in'
-        '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
+    // Loading state
+    if (!mounted) return;
+    setState(() {
+      if (isFrom) {
+        _isLoadingFrom = true;
+      } else {
+        _isLoadingTo = true;
+      }
+    });
 
     try {
-      if (!mounted) return;
-      setState(() {
-        if (isFrom) {
-          _isLoadingFrom = true;
-        } else {
-          _isLoadingTo = true;
-        }
-      });
+      List<PlacePrediction> suggestions = [];
 
-      final response = await http.get(Uri.parse(request));
-      debugPrint('Autocomplete HTTP ${response.statusCode}: ${response.body}');
+      if (kIsWeb) {
+        // WEB: Call Cloud Function to avoid CORS
+        final HttpsCallable callable =
+            FirebaseFunctions.instance.httpsCallable('getPlacesAutocomplete');
+        final result = await callable.call({
+          'input': input,
+          'sessionToken': _sessionToken,
+        });
 
-      if (!mounted) return;
-      if (response.statusCode == 200) {
         final Map<String, dynamic> data =
-            json.decode(response.body) as Map<String, dynamic>;
+            Map<String, dynamic>.from(result.data as Map);
         final String status = (data['status'] ?? '') as String;
 
         if (status == 'OK') {
           final List predictions = data['predictions'] as List? ?? [];
-          final List<PlacePrediction> suggestions = predictions
+          suggestions = predictions
               .map<PlacePrediction>((p) {
-                final Map<String, dynamic> item = p as Map<String, dynamic>;
+                final Map<String, dynamic> item =
+                    Map<String, dynamic>.from(p as Map);
                 return PlacePrediction(
                   description: item['description'] as String? ?? '',
                   placeId: item['place_id'] as String? ?? '',
@@ -456,66 +468,53 @@ class _SearchScreenState extends State<SearchScreen> {
               })
               .where((p) => p.description.isNotEmpty && p.placeId.isNotEmpty)
               .toList();
-
-          if (!mounted) return;
-          setState(() {
-            if (isFrom) {
-              fromSuggestions = suggestions;
-              showFromSuggestions = suggestions.isNotEmpty;
-            } else {
-              toSuggestions = suggestions;
-              showToSuggestions = suggestions.isNotEmpty;
-            }
-          });
-        } else if (status == 'ZERO_RESULTS') {
-          if (!mounted) return;
-          setState(() {
-            if (isFrom) {
-              fromSuggestions = [];
-              showFromSuggestions = false;
-            } else {
-              toSuggestions = [];
-              showToSuggestions = false;
-            }
-          });
-        } else {
-          debugPrint('Autocomplete API status: $status');
-          if (status == 'REQUEST_DENIED') {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Places API request denied. Check API key & billing.',
-                ),
-              ),
-            );
-          }
-          if (!mounted) return;
-          setState(() {
-            if (isFrom) {
-              fromSuggestions = [];
-              showFromSuggestions = false;
-            } else {
-              toSuggestions = [];
-              showToSuggestions = false;
-            }
-          });
         }
       } else {
-        debugPrint('Autocomplete HTTP error: ${response.statusCode}');
-        if (!mounted) return;
-        setState(() {
-          if (isFrom) {
-            fromSuggestions = [];
-            showFromSuggestions = false;
-          } else {
-            toSuggestions = [];
-            showToSuggestions = false;
+        // MOBILE: Direct HTTP Call
+        final String baseUrl =
+            'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+        final String request = '$baseUrl'
+            '?input=${Uri.encodeComponent(input)}'
+            '&key=$googleApiKey'
+            '&types=geocode'
+            '&language=en'
+            '&components=country:in'
+            '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
+
+        final response = await http.get(Uri.parse(request));
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> data =
+              json.decode(response.body) as Map<String, dynamic>;
+          final String status = (data['status'] ?? '') as String;
+
+          if (status == 'OK') {
+            final List predictions = data['predictions'] as List? ?? [];
+            suggestions = predictions
+                .map<PlacePrediction>((p) {
+                  final Map<String, dynamic> item = p as Map<String, dynamic>;
+                  return PlacePrediction(
+                    description: item['description'] as String? ?? '',
+                    placeId: item['place_id'] as String? ?? '',
+                  );
+                })
+                .where((p) => p.description.isNotEmpty && p.placeId.isNotEmpty)
+                .toList();
           }
-        });
+        }
       }
-    } catch (e, st) {
-      debugPrint('Autocomplete exception: $e\n$st');
+
+      if (!mounted) return;
+      setState(() {
+        if (isFrom) {
+          fromSuggestions = suggestions;
+          showFromSuggestions = suggestions.isNotEmpty;
+        } else {
+          toSuggestions = suggestions;
+          showToSuggestions = suggestions.isNotEmpty;
+        }
+      });
+    } catch (e) {
+      debugPrint('Autocomplete exception: $e');
       if (!mounted) return;
       setState(() {
         if (isFrom) {
@@ -542,138 +541,112 @@ class _SearchScreenState extends State<SearchScreen> {
     String placeId, {
     required bool isFrom,
   }) async {
-    final String baseUrl =
-        'https://maps.googleapis.com/maps/api/place/details/json';
     _sessionToken ??= DateTime.now().millisecondsSinceEpoch.toString();
 
-    final String request =
-        '$baseUrl'
-        '?place_id=${Uri.encodeComponent(placeId)}'
-        '&fields=geometry,formatted_address,address_component,place_id'
-        '&key=$googleApiKey'
-        '&language=en'
-        '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
-
     try {
-      final response = await http.get(Uri.parse(request));
-      debugPrint('PlaceDetails HTTP ${response.statusCode}: ${response.body}');
+      Map<String, dynamic> result = {};
 
-      if (!mounted) return;
-      if (response.statusCode == 200) {
+      if (kIsWeb) {
+        // WEB: Call Cloud Function
+        final HttpsCallable callable =
+            FirebaseFunctions.instance.httpsCallable('getPlaceDetails');
+        final response = await callable.call({
+          'placeId': placeId,
+          'sessionToken': _sessionToken,
+        });
         final Map<String, dynamic> data =
-            json.decode(response.body) as Map<String, dynamic>;
-        final String status = (data['status'] ?? '') as String;
-
-        if (status == 'OK') {
-          final Map<String, dynamic> result =
-              data['result'] as Map<String, dynamic>;
-          final Map<String, dynamic> geometry =
-              result['geometry'] as Map<String, dynamic>? ?? {};
-          final Map<String, dynamic> location =
-              geometry['location'] as Map<String, dynamic>? ?? {};
-          final double? lat = (location['lat'] != null)
-              ? (location['lat'] as num).toDouble()
-              : null;
-          final double? lng = (location['lng'] != null)
-              ? (location['lng'] as num).toDouble()
-              : null;
-          final String formattedAddress =
-              result['formatted_address'] as String? ?? '';
-          final String returnedPlaceId = result['place_id'] as String? ?? '';
-
-          // address components -> extract locality/admin_area/postal_code
-          // ignore: unused_local_variable
-          String? locality, adminArea, postalCode;
-          final List<dynamic> components =
-              result['address_components'] as List<dynamic>? ?? [];
-          for (final c in components) {
-            final comp = c as Map<String, dynamic>;
-            final List types = comp['types'] as List? ?? [];
-            if (types.contains('locality'))
-              locality = comp['long_name'] as String?;
-            if (types.contains('administrative_area_level_1') ||
-                types.contains('administrative_area_level_2')) {
-              adminArea ??= comp['long_name'] as String?;
-            }
-            if (types.contains('postal_code'))
-              postalCode = comp['long_name'] as String?;
-          }
-
-          if (!mounted) return;
-          setState(() {
-            if (isFrom) {
-              if (formattedAddress.isNotEmpty)
-                fromController.text = formattedAddress;
-              if (lat != null && lng != null) fromLatLng = LatLngPair(lat, lng);
-              _fromPlaceId = returnedPlaceId;
-              _fromLocality = locality;
-              _fromAdminArea = adminArea;
-              fromSuggestions = [];
-              showFromSuggestions = false;
-            } else {
-              if (formattedAddress.isNotEmpty)
-                toController.text = formattedAddress;
-              if (lat != null && lng != null) toLatLng = LatLngPair(lat, lng);
-              _toPlaceId = returnedPlaceId;
-              _toLocality = locality;
-              _toAdminArea = adminArea;
-              toSuggestions = [];
-              showToSuggestions = false;
-            }
-          });
-
-          // Reset session token after selection
-          _sessionToken = null;
-        } else {
-          debugPrint('Place Details API status: $status');
-          if (status == 'REQUEST_DENIED') {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Place Details request denied. Check API key & billing.',
-                ),
-              ),
-            );
-          }
-          if (!mounted) return;
-          setState(() {
-            if (isFrom) {
-              fromSuggestions = [];
-              showFromSuggestions = false;
-            } else {
-              toSuggestions = [];
-              showToSuggestions = false;
-            }
-          });
+            Map<String, dynamic>.from(response.data as Map);
+        if (data['status'] == 'OK') {
+          result = Map<String, dynamic>.from(data['result'] as Map);
         }
       } else {
-        debugPrint('Place Details HTTP error: ${response.statusCode}');
-        if (!mounted) return;
+        // MOBILE: Direct HTTP Call
+        final String baseUrl =
+            'https://maps.googleapis.com/maps/api/place/details/json';
+        final String request = '$baseUrl'
+            '?place_id=${Uri.encodeComponent(placeId)}'
+            '&fields=geometry,formatted_address,address_component,place_id'
+            '&key=$googleApiKey'
+            '&language=en'
+            '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
+
+        final response = await http.get(Uri.parse(request));
+        debugPrint(
+            'PlaceDetails HTTP ${response.statusCode}: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> data =
+              json.decode(response.body) as Map<String, dynamic>;
+          if (data['status'] == 'OK') {
+            result = data['result'] as Map<String, dynamic>;
+          }
+        }
+      }
+
+      if (result.isNotEmpty && mounted) {
+        final Map<String, dynamic> geometry =
+            result['geometry'] as Map<String, dynamic>? ?? {};
+        final Map<String, dynamic> location =
+            geometry['location'] as Map<String, dynamic>? ?? {};
+        final double? lat = (location['lat'] != null)
+            ? (location['lat'] as num).toDouble()
+            : null;
+        final double? lng = (location['lng'] != null)
+            ? (location['lng'] as num).toDouble()
+            : null;
+        final String formattedAddress =
+            result['formatted_address'] as String? ?? '';
+        final String returnedPlaceId = result['place_id'] as String? ?? '';
+
+        // address components -> extract locality/admin_area/postal_code
+        String? locality, adminArea, postalCode;
+        final List<dynamic> components =
+            result['address_components'] as List<dynamic>? ?? [];
+        for (final c in components) {
+          final comp = Map<String, dynamic>.from(c as Map);
+          final List types = comp['types'] as List? ?? [];
+          if (types.contains('locality'))
+            locality = comp['long_name'] as String?;
+          if (types.contains('administrative_area_level_1') ||
+              types.contains('administrative_area_level_2')) {
+            adminArea ??= comp['long_name'] as String?;
+          }
+          if (types.contains('postal_code'))
+            postalCode = comp['long_name'] as String?;
+        }
+
         setState(() {
           if (isFrom) {
+            fromController.text = formattedAddress; // full address
+            _fromPlaceId = returnedPlaceId;
+            if (lat != null && lng != null) {
+              fromLatLng = LatLngPair(lat, lng);
+            }
+            _fromLocality = locality;
+            _fromAdminArea = adminArea;
+            // hide suggestions
             fromSuggestions = [];
             showFromSuggestions = false;
           } else {
+            toController.text = formattedAddress;
+            _toPlaceId = returnedPlaceId;
+            if (lat != null && lng != null) {
+              toLatLng = LatLngPair(lat, lng);
+            }
+            _toLocality = locality;
+            _toAdminArea = adminArea;
+            // hide suggestions
             toSuggestions = [];
             showToSuggestions = false;
           }
         });
       }
-    } catch (e, st) {
-      debugPrint('Place Details exception: $e\n$st');
-      if (!mounted) return;
-      setState(() {
-        if (isFrom) {
-          fromSuggestions = [];
-          showFromSuggestions = false;
-        } else {
-          toSuggestions = [];
-          showToSuggestions = false;
-        }
-      });
+    } catch (e) {
+      debugPrint('PlaceDetails exception: $e');
     }
   }
+
+
 
   // ---------------- UI helpers ----------------
 
@@ -681,8 +654,6 @@ class _SearchScreenState extends State<SearchScreen> {
     required List<PlacePrediction> suggestions,
     required bool show,
     required bool isLoading,
-    required double screenWidth,
-    required double screenHeight,
     required Function(PlacePrediction) onTap,
   }) {
     if (!show || suggestions.isEmpty) return const SizedBox.shrink();
@@ -690,7 +661,7 @@ class _SearchScreenState extends State<SearchScreen> {
     if (isLoading) {
       return Container(
         margin: const EdgeInsets.only(top: 8),
-        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -719,7 +690,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ],
       ),
-      constraints: BoxConstraints(maxHeight: 180),
+      constraints: const BoxConstraints(maxHeight: 180),
       child: ListView.separated(
         shrinkWrap: true,
         itemCount: suggestions.length,
@@ -729,7 +700,7 @@ class _SearchScreenState extends State<SearchScreen> {
           return ListTile(
             title: Text(
               p.description,
-              style: GoogleFonts.lexend(fontSize: screenWidth * 0.038),
+              style: GoogleFonts.lexend(fontSize: 15),
             ),
             onTap: () => onTap(p),
           );
@@ -743,381 +714,332 @@ class _SearchScreenState extends State<SearchScreen> {
   // ----------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
+
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ========================= HEADER ===========================
-              Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFF3B30),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(25),
-                    bottomRight: Radius.circular(25),
-                  ),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.06,
-                    vertical: screenHeight * 0.04,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Center(
-                            child: Text(
-                              'Find a Ride?',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.065,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const Positioned(
-                            right: 0,
-                            child: NotificationIcon(),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: screenHeight * 0.025),
-                      Text(
-                        'Where are you going?',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.04,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.012),
-
-                      // ================= FROM FIELD =================
-                      Text(
-                        'From',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.035,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-
-                      TextField(
-                        controller: fromController,
-                        onTap: () {
-                          // if already typed 3+ chars, fetch suggestions
-                          if ((fromController.text).trim().length >= 3) {
-                            _onFromChanged(fromController.text);
-                          }
-                        },
-                        onChanged: (value) => _onFromChanged(value),
-                        decoration: InputDecoration(
-                          hintText: 'Enter City Name',
-                          hintStyle: GoogleFonts.lexend(
-                            color: Colors.grey[400],
-                            fontSize: screenWidth * 0.038,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.04,
-                            vertical: screenHeight * 0.018,
-                          ),
-                        ),
-                      ),
-
-                      // Places suggestions
-                      if (showFromSuggestions)
-                        _buildAutocompleteBox(
-                          suggestions: fromSuggestions,
-                          show: showFromSuggestions,
-                          isLoading: _isLoadingFrom,
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onTap: (p) =>
-                              fetchPlaceDetailsAndSet(p.placeId, isFrom: true),
-                        ),
-
-                      SizedBox(height: screenHeight * 0.02),
-
-                      // ================= SWAP BUTTON & TO FIELD =================
-                      // ================= SWAP BUTTON & TO FIELD =================
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'To',
-                            style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.035,
-                              color: Colors.white,
-                            ),
-                          ),
-                          // Swap Button (Right Side)
-                          Container(
-                            width: 32, // explicit small size
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: IconButton(
-                              onPressed: _swapLocations,
-                              icon: const Icon(
-                                Icons.swap_vert,
-                                color: Color(0xFFFF3B30),
-                                size: 18,
-                              ),
-                              tooltip: 'Swap Locations',
-                              padding: EdgeInsets.zero, // remove padding
-                              constraints: const BoxConstraints(),
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      SizedBox(height: 8),
-                      TextField(
-                        controller: toController,
-                        onTap: () {
-                          if ((toController.text).trim().length >= 3) {
-                            _onToChanged(toController.text);
-                          }
-                        },
-                        onChanged: (value) => _onToChanged(value),
-                        decoration: InputDecoration(
-                          hintText: 'Enter City Name',
-                          hintStyle: GoogleFonts.lexend(
-                            color: Colors.grey[400],
-                            fontSize: screenWidth * 0.038,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.04,
-                            vertical: screenHeight * 0.018,
-                          ),
-                        ),
-                      ),
-
-                      if (showToSuggestions)
-                        _buildAutocompleteBox(
-                          suggestions: toSuggestions,
-                          show: showToSuggestions,
-                          isLoading: _isLoadingTo,
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onTap: (p) =>
-                              fetchPlaceDetailsAndSet(p.placeId, isFrom: false),
-                        ),
-
-                      SizedBox(height: screenHeight * 0.02),
-
-                      // ================= DATE =================
-                      Text(
-                        'Date',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.035,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      TextField(
-                        controller: dateController,
-                        readOnly: true,
-                        onTap: selectDate,
-                        decoration: InputDecoration(
-                          hintText: 'Enter Date',
-                          hintStyle: GoogleFonts.lexend(
-                            color: Colors.grey[400],
-                            fontSize: screenWidth * 0.038,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.04,
-                            vertical: screenHeight * 0.018,
-                          ),
-                          suffixIcon: const Icon(Icons.calendar_today),
-                        ),
-                      ),
-
-                      SizedBox(height: screenHeight * 0.02),
-
-                      // // ================= PASSENGERS =================
-                      // Text(
-                      //   'No. of Passengers',
-                      //   style: GoogleFonts.lexend(
-                      //     fontSize: screenWidth * 0.035,
-                      //     color: Colors.white,
-                      //   ),
-                      // ),
-                      // SizedBox(height: screenHeight * 0.012),
-                      // Row(
-                      //   children: [
-                      //     GestureDetector(
-                      //       onTap: decrementPassengers,
-                      //       child: Container(
-                      //         width: screenWidth * 0.1,
-                      //         height: screenWidth * 0.1,
-                      //         decoration: const BoxDecoration(
-                      //           color: Colors.white,
-                      //           shape: BoxShape.circle,
-                      //         ),
-                      //         child: const Icon(
-                      //           Icons.remove,
-                      //           color: Color(0xFFFF4444),
-                      //         ),
-                      //       ),
-                      //     ),
-                      //     SizedBox(width: screenWidth * 0.04),
-                      //     Text(
-                      //       '$passengers',
-                      //       style: GoogleFonts.lexend(
-                      //         fontSize: screenWidth * 0.05,
-                      //         fontWeight: FontWeight.w600,
-                      //         color: Colors.white,
-                      //       ),
-                      //     ),
-                      //     SizedBox(width: screenWidth * 0.04),
-                      //     GestureDetector(
-                      //       onTap: incrementPassengers,
-                      //       child: Container(
-                      //         width: screenWidth * 0.1,
-                      //         height: screenWidth * 0.1,
-                      //         decoration: const BoxDecoration(
-                      //           color: Colors.white,
-                      //           shape: BoxShape.circle,
-                      //         ),
-                      //         child: const Icon(
-                      //           Icons.add,
-                      //           color: Color(0xFFFF4444),
-                      //         ),
-                      //       ),
-                      //     ),
-                      //   ],
-                      // ),
-                      // SizedBox(height: screenHeight * 0.025),
-
-                      // ================= SEARCH BUTTON =================
-                      Center(
-                        child: SizedBox(
-                          width:
-                              screenWidth *
-                              0.6, // smaller width (60% of screen)
-                          height: screenHeight * 0.065, // smaller button height
-                          child: ElevatedButton(
-                            onPressed: isSubmitting
-                                ? null
-                                : () => handleSearch(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              padding: EdgeInsets
-                                  .zero, // prevents auto-increase in height
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                            ),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: isSubmitting
-                                  ? SizedBox.expand(
-                                      key: const ValueKey('loading'),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(25),
-                                        child: Image.asset(
-                                          "assets/car_loading.gif",
-                                          fit: BoxFit
-                                              .cover, // fills the small button nicely
-                                        ),
-                                      ),
-                                    )
-                                  : isPublished
-                                  ? Text(
-                                      "Searching...",
-                                      key: const ValueKey('published'),
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.045,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.green,
-                                      ),
-                                    )
-                                  : Text(
-                                      "Search",
-                                      key: const ValueKey('search'),
-                                      style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.045,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFFFF3B30),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ================= RECENTS =================
-              if (recentRides.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.all(screenWidth * 0.06),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Recents', style: GoogleFonts.lexend(fontSize: screenWidth * 0.05, fontWeight: FontWeight.w600, color: Colors.black87)),
-                    SizedBox(height: screenHeight * 0.015),
-                    ...recentRides.map(
-                      (ride) => RecentRideItem(
-                        ride: ride,
-                        screenWidth: screenWidth,
-                        screenHeight: screenHeight,
-                        onTap: () {
-                          // Populate fields
-                          setState(() {
-                            fromController.text = ride.from;
-                            toController.text = ride.to;
-                            _fromPlaceId = ride.fromPlaceId;
-                            _toPlaceId = ride.toPlaceId;
-                            if (ride.fromLat != null && ride.fromLng != null) {
-                              fromLatLng = LatLngPair(ride.fromLat!, ride.fromLng!);
-                            }
-                            if (ride.toLat != null && ride.toLng != null) {
-                              toLatLng = LatLngPair(ride.toLat!, ride.toLng!);
-                            }
-                          });
-                        },
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ========================= HEADER ===========================
+                  Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF3B30),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(25),
+                        bottomRight: Radius.circular(25),
                       ),
                     ),
-                  ]),
-                ),
-            ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0,
+                        vertical: 30.0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Center(
+                                child: Text(
+                                  'Find a Ride?',
+                                  style: GoogleFonts.lexend(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              const Positioned(
+                                right: 0,
+                                child: NotificationIcon(),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Where are you going?',
+                            style: GoogleFonts.lexend(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // ================= FROM FIELD =================
+                          Text(
+                            'From',
+                            style: GoogleFonts.lexend(
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          TextField(
+                            controller: fromController,
+                            onTap: () {
+                              if ((fromController.text).trim().length >= 3) {
+                                _onFromChanged(fromController.text);
+                              }
+                            },
+                            onChanged: (value) => _onFromChanged(value),
+                            decoration: InputDecoration(
+                              hintText: 'Enter City Name',
+                              hintStyle: GoogleFonts.lexend(
+                                color: Colors.grey[400],
+                                fontSize: 15,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+
+                          // Places suggestions
+                          if (showFromSuggestions)
+                            _buildAutocompleteBox(
+                              suggestions: fromSuggestions,
+                              show: showFromSuggestions,
+                              isLoading: _isLoadingFrom,
+
+                              onTap: (p) => fetchPlaceDetailsAndSet(p.placeId,
+                                  isFrom: true),
+                            ),
+
+                          const SizedBox(height: 20),
+
+                          // ================= SWAP BUTTON & TO FIELD =================
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'To',
+                                style: GoogleFonts.lexend(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              // Swap Button (Right Side)
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  onPressed: _swapLocations,
+                                  icon: const Icon(
+                                    Icons.swap_vert,
+                                    color: Color(0xFFFF3B30),
+                                    size: 18,
+                                  ),
+                                  tooltip: 'Swap Locations',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: toController,
+                            onTap: () {
+                              if ((toController.text).trim().length >= 3) {
+                                _onToChanged(toController.text);
+                              }
+                            },
+                            onChanged: (value) => _onToChanged(value),
+                            decoration: InputDecoration(
+                              hintText: 'Enter City Name',
+                              hintStyle: GoogleFonts.lexend(
+                                color: Colors.grey[400],
+                                fontSize: 15,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+
+                          if (showToSuggestions)
+                            _buildAutocompleteBox(
+                              suggestions: toSuggestions,
+                              show: showToSuggestions,
+                              isLoading: _isLoadingTo,
+
+                              onTap: (p) => fetchPlaceDetailsAndSet(p.placeId,
+                                  isFrom: false),
+                            ),
+
+                          const SizedBox(height: 20),
+
+                          // ================= DATE =================
+                          Text(
+                            'Date',
+                            style: GoogleFonts.lexend(
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: dateController,
+                            readOnly: true,
+                            onTap: selectDate,
+                            decoration: InputDecoration(
+                              hintText: 'Enter Date',
+                              hintStyle: GoogleFonts.lexend(
+                                color: Colors.grey[400],
+                                fontSize: 15,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              suffixIcon: const Icon(Icons.calendar_today),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // ================= SEARCH BUTTON =================
+                          Center(
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () => handleSearch(),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: isSubmitting
+                                      ? SizedBox.expand(
+                                          key: const ValueKey('loading'),
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(25),
+                                            child: Image.asset(
+                                              "assets/car_loading.gif",
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        )
+                                      : isPublished
+                                          ? Text(
+                                              "Searching...",
+                                              key: const ValueKey('published'),
+                                              style: GoogleFonts.lexend(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.green,
+                                              ),
+                                            )
+                                          : Text(
+                                              "Search",
+                                              key: const ValueKey('search'),
+                                              style: GoogleFonts.lexend(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFFFF3B30),
+                                              ),
+                                            ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ================= RECENTS =================
+                  if (recentRides.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Recents',
+                                style: GoogleFonts.lexend(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87)),
+                            const SizedBox(height: 15),
+                            ...recentRides.map(
+                              (ride) => RecentRideItem(
+                                ride: ride,
+
+                                onTap: () {
+                                  // Populate fields
+                                  setState(() {
+                                    fromController.text = ride.from;
+                                    toController.text = ride.to;
+                                    _fromPlaceId = ride.fromPlaceId;
+                                    _toPlaceId = ride.toPlaceId;
+                                    if (ride.fromLat != null &&
+                                        ride.fromLng != null) {
+                                      fromLatLng = LatLngPair(
+                                          ride.fromLat!, ride.fromLng!);
+                                    }
+                                    if (ride.toLat != null &&
+                                        ride.toLng != null) {
+                                      toLatLng = LatLngPair(
+                                          ride.toLat!, ride.toLng!);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                          ]),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -1174,15 +1096,11 @@ class RecentRide {
 
 class RecentRideItem extends StatelessWidget {
   final RecentRide ride;
-  final double screenWidth;
-  final double screenHeight;
   final VoidCallback onTap;
 
   const RecentRideItem({
     super.key,
     required this.ride,
-    required this.screenWidth,
-    required this.screenHeight,
     required this.onTap,
   });
 
@@ -1191,8 +1109,8 @@ class RecentRideItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: screenHeight * 0.012),
-        padding: EdgeInsets.all(screenWidth * 0.04),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -1203,9 +1121,9 @@ class RecentRideItem extends StatelessWidget {
             Icon(
               Icons.history,
               color: Colors.grey[600],
-              size: screenWidth * 0.06,
+              size: 24,
             ),
-            SizedBox(width: screenWidth * 0.03),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1213,14 +1131,14 @@ class RecentRideItem extends StatelessWidget {
                   Text(
                     'From',
                     style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.03,
+                      fontSize: 12,
                       color: Colors.grey[600],
                     ),
                   ),
                   Text(
                     ride.from.split(',')[0].trim(), // Only first part
                     style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.038,
+                      fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: Colors.black87,
                     ),
@@ -1233,9 +1151,9 @@ class RecentRideItem extends StatelessWidget {
             Icon(
               Icons.arrow_forward,
               color: Colors.grey[400],
-              size: screenWidth * 0.05,
+              size: 20,
             ),
-            SizedBox(width: screenWidth * 0.04),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1243,14 +1161,14 @@ class RecentRideItem extends StatelessWidget {
                   Text(
                     'To',
                     style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.03,
+                      fontSize: 12,
                       color: Colors.grey[600],
                     ),
                   ),
                   Text(
                     ride.to.split(',')[0].trim(), // Only first part
                     style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.038,
+                      fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: Colors.black87,
                     ),

@@ -11,6 +11,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 // import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart'; // <-- added
@@ -72,7 +74,20 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
   LatLngPair? toLatLng;
 
   // YOUR GOOGLE API KEY (restrict it in production)
-  static const String googleApiKey = 'AIzaSyCwizUugA6ySbo1PnnuNdPxGDXHPZAWtjY';
+  // Google API Key selection based on platform
+  String get googleApiKey {
+    if (kIsWeb) {
+      return 'AIzaSyBnmoEDuYaANSe4eO-2B4FUdW7-rJ5Ed_s';
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'AIzaSyC0YzYM2SMNib_QNRiqnILXWqieKZrXjqQ';
+      case TargetPlatform.iOS:
+        return 'AIzaSyCJqyEEOjscQ8gKXZoZWYGOiTUJH5N5FtQ';
+      default:
+        return 'AIzaSyC0YzYM2SMNib_QNRiqnILXWqieKZrXjqQ';
+    }
+  }
 
   // Other state
   int passengers = 1;
@@ -466,102 +481,94 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
     String input, {
     required bool isFrom,
   }) async {
-    final String baseUrl =
-        'https://maps.googleapis.com/maps/api/place/autocomplete/json';
     _sessionToken ??= DateTime.now().millisecondsSinceEpoch.toString();
 
-    final String request =
-        '$baseUrl'
-        '?input=${Uri.encodeComponent(input)}'
-        '&key=$googleApiKey'
-        '&types=geocode'
-        '&language=en'
-        '&components=country:in'
-        '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
+    // Loading state
+    if (!mounted) return;
+    setState(() {
+      if (isFrom) {
+        _isLoadingFrom = true;
+      } else {
+        _isLoadingTo = true;
+      }
+    });
 
     try {
-      setState(() {
-        if (isFrom)
-          _isLoadingFrom = true;
-        else
-          _isLoadingTo = true;
-      });
+      List<PlacePrediction> suggestions = [];
 
-      final response = await http.get(Uri.parse(request));
-      debugPrint(
-        'Places Autocomplete HTTP ${response.statusCode}: ${response.body}',
-      );
-
-      if (response.statusCode == 200) {
-        final Map data = json.decode(response.body);
+      if (kIsWeb) {
+        // WEB: Cloud Function
+        final HttpsCallable callable =
+            FirebaseFunctions.instance.httpsCallable('getPlacesAutocomplete');
+        final result = await callable.call({
+          'input': input,
+          'sessionToken': _sessionToken,
+        });
+        final Map<String, dynamic> data =
+            Map<String, dynamic>.from(result.data as Map);
         final String status = (data['status'] ?? '') as String;
 
         if (status == 'OK') {
-          final List predictions = data['predictions'] ?? [];
-          final List<PlacePrediction> suggestions = predictions
-              .map<PlacePrediction>(
-                (p) => PlacePrediction(
-                  description: (p['description'] ?? '') as String,
-                  placeId: (p['place_id'] ?? '') as String,
-                ),
-              )
+          final List predictions = data['predictions'] as List? ?? [];
+          suggestions = predictions
+              .map<PlacePrediction>((p) {
+                final Map<String, dynamic> item =
+                    Map<String, dynamic>.from(p as Map);
+                return PlacePrediction(
+                  description: item['description'] as String? ?? '',
+                  placeId: item['place_id'] as String? ?? '',
+                );
+              })
               .where((p) => p.description.isNotEmpty && p.placeId.isNotEmpty)
               .toList();
-
-          setState(() {
-            if (isFrom) {
-              fromSuggestions = suggestions;
-              showFromSuggestions = suggestions.isNotEmpty;
-            } else {
-              toSuggestions = suggestions;
-              showToSuggestions = suggestions.isNotEmpty;
-            }
-          });
-        } else if (status == 'ZERO_RESULTS') {
-          setState(() {
-            if (isFrom) {
-              fromSuggestions = [];
-              showFromSuggestions = false;
-            } else {
-              toSuggestions = [];
-              showToSuggestions = false;
-            }
-          });
-        } else {
-          debugPrint('Places Autocomplete API returned status: $status');
-          if (status == 'REQUEST_DENIED') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Places API request denied. Check API key & billing.',
-                ),
-              ),
-            );
-          }
-          setState(() {
-            if (isFrom) {
-              fromSuggestions = [];
-              showFromSuggestions = false;
-            } else {
-              toSuggestions = [];
-              showToSuggestions = false;
-            }
-          });
         }
       } else {
-        debugPrint('Places Autocomplete HTTP error: ${response.statusCode}');
-        setState(() {
-          if (isFrom) {
-            fromSuggestions = [];
-            showFromSuggestions = false;
-          } else {
-            toSuggestions = [];
-            showToSuggestions = false;
+        // MOBILE: Direct HTTP
+        final String baseUrl =
+            'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+        final String request = '$baseUrl'
+            '?input=${Uri.encodeComponent(input)}'
+            '&key=$googleApiKey'
+            '&types=geocode'
+            '&language=en'
+            '&components=country:in'
+            '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
+
+        final response = await http.get(Uri.parse(request));
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> data =
+              json.decode(response.body) as Map<String, dynamic>;
+          final String status = (data['status'] ?? '') as String;
+
+          if (status == 'OK') {
+            final List predictions = data['predictions'] as List? ?? [];
+            suggestions = predictions
+                .map<PlacePrediction>((p) {
+                  final Map<String, dynamic> item = p as Map<String, dynamic>;
+                  return PlacePrediction(
+                    description: item['description'] as String? ?? '',
+                    placeId: item['place_id'] as String? ?? '',
+                  );
+                })
+                .where((p) => p.description.isNotEmpty && p.placeId.isNotEmpty)
+                .toList();
           }
-        });
+        }
       }
-    } catch (e, st) {
-      debugPrint('Places Autocomplete exception: $e\n$st');
+
+      if (!mounted) return;
+      setState(() {
+        if (isFrom) {
+          fromSuggestions = suggestions;
+          showFromSuggestions = suggestions.isNotEmpty;
+        } else {
+          toSuggestions = suggestions;
+          showToSuggestions = suggestions.isNotEmpty;
+        }
+      });
+    } catch (e) {
+      debugPrint('Autocomplete exception: $e');
+      if (!mounted) return;
       setState(() {
         if (isFrom) {
           fromSuggestions = [];
@@ -572,11 +579,13 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
         }
       });
     } finally {
+      if (!mounted) return;
       setState(() {
-        if (isFrom)
+        if (isFrom) {
           _isLoadingFrom = false;
-        else
+        } else {
           _isLoadingTo = false;
+        }
       });
     }
   }
@@ -585,60 +594,26 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
     String placeId, {
     required bool isFrom,
   }) async {
-    final String baseUrl =
-        'https://maps.googleapis.com/maps/api/place/details/json';
     _sessionToken ??= DateTime.now().millisecondsSinceEpoch.toString();
 
-    final String request =
-        '$baseUrl'
-        '?place_id=${Uri.encodeComponent(placeId)}'
-        '&fields=geometry,formatted_address'
-        '&key=$googleApiKey'
-        '&language=en'
-        '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
-
     try {
-      final response = await http.get(Uri.parse(request));
-      debugPrint('Place Details HTTP ${response.statusCode}: ${response.body}');
+      Map<String, dynamic> result = {};
 
-      if (response.statusCode == 200) {
-        final Map data = json.decode(response.body);
-        final String status = (data['status'] ?? '') as String;
-
-        if (status == 'OK') {
-          final Map result = data['result'] ?? {};
-          final Map geometry = result['geometry'] ?? {};
-          final Map location = geometry['location'] ?? {};
-          final double? lat = (location['lat'] != null)
-              ? (location['lat'] as num).toDouble()
-              : null;
-          final double? lng = (location['lng'] != null)
-              ? (location['lng'] as num).toDouble()
-              : null;
-          final String? formattedAddress =
-              result['formatted_address'] as String?;
-
-          setState(() {
-            if (isFrom) {
-              if (formattedAddress != null && formattedAddress.isNotEmpty)
-                fromCityController.text = formattedAddress;
-              if (lat != null && lng != null) fromLatLng = LatLngPair(lat, lng);
-              fromSuggestions = [];
-              showFromSuggestions = false;
-            } else {
-              if (formattedAddress != null && formattedAddress.isNotEmpty)
-                toCityController.text = formattedAddress;
-              if (lat != null && lng != null) toLatLng = LatLngPair(lat, lng);
-              toSuggestions = [];
-              showToSuggestions = false;
-            }
-          });
-
-          // reset session token after selection
-          _sessionToken = null;
+      if (kIsWeb) {
+        // WEB: Cloud Function
+        final HttpsCallable callable =
+            FirebaseFunctions.instance.httpsCallable('getPlaceDetails');
+        final response = await callable.call({
+          'placeId': placeId,
+          'sessionToken': _sessionToken,
+        });
+        final Map<String, dynamic> data =
+            Map<String, dynamic>.from(response.data as Map);
+        if (data['status'] == 'OK') {
+          result = Map<String, dynamic>.from(data['result'] as Map);
         } else {
-          debugPrint('Place Details API returned status: $status');
-          if (status == 'REQUEST_DENIED') {
+          debugPrint('Place Details Cloud Function returned status: ${data['status']}');
+          if (data['status'] == 'REQUEST_DENIED') {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
@@ -658,16 +633,56 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
           });
         }
       } else {
-        debugPrint('Place Details HTTP error: ${response.statusCode}');
-        setState(() {
-          if (isFrom) {
-            fromSuggestions = [];
-            showFromSuggestions = false;
-          } else {
-            toSuggestions = [];
-            showToSuggestions = false;
+        // MOBILE: Direct HTTP
+        final String baseUrl =
+            'https://maps.googleapis.com/maps/api/place/details/json';
+        final String request = '$baseUrl'
+            '?place_id=${Uri.encodeComponent(placeId)}'
+            '&fields=geometry,formatted_address,address_component,place_id'
+            '&key=$googleApiKey'
+            '&language=en'
+            '&sessiontoken=${Uri.encodeComponent(_sessionToken!)}';
+
+        final response = await http.get(Uri.parse(request));
+        debugPrint(
+            'Place Details HTTP ${response.statusCode}: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final Map data = json.decode(response.body);
+          final String status = (data['status'] ?? '') as String;
+
+          if (status == 'OK') {
+            final Map result = data['result'] ?? {};
+            final Map geometry = result['geometry'] ?? {};
+            final Map location = geometry['location'] ?? {};
+            final double? lat = (location['lat'] != null)
+                ? (location['lat'] as num).toDouble()
+                : null;
+            final double? lng = (location['lng'] != null)
+                ? (location['lng'] as num).toDouble()
+                : null;
+            final String formattedAddress =
+                (result['formatted_address'] ?? '') as String;
+
+            setState(() {
+              if (isFrom) {
+                fromCityController.text = formattedAddress;
+                if (lat != null && lng != null) {
+                  fromLatLng = LatLngPair(lat, lng);
+                }
+                fromSuggestions = [];
+                showFromSuggestions = false;
+              } else {
+                toCityController.text = formattedAddress;
+                if (lat != null && lng != null) {
+                  toLatLng = LatLngPair(lat, lng);
+                }
+                toSuggestions = [];
+                showToSuggestions = false;
+              }
+            });
           }
-        });
+        }
       }
     } catch (e, st) {
       debugPrint('Place Details exception: $e\n$st');
@@ -687,9 +702,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
 
   Widget _buildTextField(
     String hint,
-    TextEditingController? controller,
-    double screenWidth,
-    double screenHeight, {
+    TextEditingController? controller, {
     bool readOnly = false,
     VoidCallback? onTap,
     IconData? suffixIcon,
@@ -710,7 +723,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
         hintText: hint,
         hintStyle: GoogleFonts.lexend(
           color: Colors.grey[400],
-          fontSize: screenWidth * 0.038,
+          fontSize: 15,
         ),
         errorStyle: const TextStyle(
           color: Colors.white,
@@ -723,13 +736,13 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.04,
-          vertical: screenHeight * 0.018,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
         ),
         suffixIcon: suffixIcon != null ? Icon(suffixIcon) : null,
       ),
-      style: GoogleFonts.lexend(fontSize: screenWidth * 0.04),
+      style: GoogleFonts.lexend(fontSize: 16),
     );
   }
 
@@ -737,14 +750,12 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
     required List<PlacePrediction> suggestions,
     required bool show,
     required bool isLoading,
-    required double screenWidth,
-    required double screenHeight,
     required Function(PlacePrediction) onTap,
   }) {
     if (isLoading) {
       return Container(
         margin: const EdgeInsets.only(top: 8),
-        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -775,7 +786,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
           ),
         ],
       ),
-      constraints: BoxConstraints(maxHeight: 180),
+      constraints: const BoxConstraints(maxHeight: 180),
       child: ListView.separated(
         shrinkWrap: true,
         itemCount: suggestions.length,
@@ -785,7 +796,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
           return ListTile(
             title: Text(
               p.description,
-              style: GoogleFonts.lexend(fontSize: screenWidth * 0.038),
+              style: GoogleFonts.lexend(fontSize: 15),
             ),
             onTap: () => onTap(p),
           );
@@ -796,15 +807,13 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
               children: [
                 Expanded(
                   child: SingleChildScrollView(
@@ -818,9 +827,9 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                         ),
                       ),
                       child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.06,
-                          vertical: screenHeight * 0.03,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 30.0,
                         ),
                         child: Form(
                           key: _formKey,
@@ -834,7 +843,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                     child: Text(
                                       "Publish A Ride?",
                                       style: GoogleFonts.lexend(
-                                        fontSize: screenWidth * 0.065,
+                                        fontSize: 24,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white,
                                       ),
@@ -846,33 +855,31 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: screenHeight * 0.025),
+                              const SizedBox(height: 20),
 
                               // Rider Details
                               Text(
                                 "Enter Rider Details",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 12),
 
                               Text(
                                 "Name",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.010),
+                              const SizedBox(height: 8),
                               _buildTextField(
                                 "Enter Rider Name",
                                 riderNameController,
-                                screenWidth,
-                                screenHeight,
                                 keyboardType: TextInputType.name,
                                 validator: (v) {
                                   if (v == null || v.isEmpty)
@@ -882,23 +889,21 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                   return null;
                                 },
                               ),
-                              SizedBox(height: screenHeight * 0.015),
+                              const SizedBox(height: 15),
 
                               // Phone
                               Text(
                                 "Phone Number",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.010),
+                              const SizedBox(height: 8),
                               _buildTextField(
                                 "Enter Phone Number",
                                 phoneController,
-                                screenWidth,
-                                screenHeight,
                                 keyboardType: TextInputType.phone,
                                 inputFormatters: [
                                   LengthLimitingTextInputFormatter(10),
@@ -912,7 +917,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                   return null;
                                 },
                               ),
-                              SizedBox(height: screenHeight * 0.02),
+                              const SizedBox(height: 20),
 
                               // // Profile picture
                               // Text("Profile Picture", style: GoogleFonts.lexend(fontSize: screenWidth * 0.04, fontWeight: FontWeight.w500, color: Colors.white)),
@@ -932,31 +937,32 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                               // SizedBox(height: screenHeight * 0.02),
 
                               // Enter Ride Details
+                              const SizedBox(height: 20),
+
+                              // Enter Ride Details
                               Text(
                                 "Enter Ride Details",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 12),
 
                               // From - autocomplete field
                               Text(
                                 "From",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.010),
+                              const SizedBox(height: 8),
                               _buildTextField(
                                 "Enter City / Place",
                                 fromCityController,
-                                screenWidth,
-                                screenHeight,
                                 validator: (v) => v == null || v.isEmpty
                                     ? "Select a City"
                                     : null,
@@ -966,30 +972,26 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                 suggestions: fromSuggestions,
                                 show: showFromSuggestions,
                                 isLoading: _isLoadingFrom,
-                                screenWidth: screenWidth,
-                                screenHeight: screenHeight,
                                 onTap: (p) => fetchPlaceDetailsAndSet(
                                   p.placeId,
                                   isFrom: true,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.015),
+                              const SizedBox(height: 15),
 
                               // To - autocomplete field
                               Text(
                                 "To",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.010),
+                              const SizedBox(height: 8),
                               _buildTextField(
                                 "Enter City / Place",
                                 toCityController,
-                                screenWidth,
-                                screenHeight,
                                 validator: (v) {
                                   if (v == null || v.isEmpty)
                                     return "Select a City";
@@ -1003,32 +1005,30 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                 suggestions: toSuggestions,
                                 show: showToSuggestions,
                                 isLoading: _isLoadingTo,
-                                screenWidth: screenWidth,
-                                screenHeight: screenHeight,
                                 onTap: (p) => fetchPlaceDetailsAndSet(
                                   p.placeId,
                                   isFrom: false,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.02),
+                              const SizedBox(height: 20),
 
                               // Passengers
                               Text(
                                 "No of Passengers",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 12),
                               Row(
                                 children: [
                                   GestureDetector(
                                     onTap: decrementPassengers,
                                     child: Container(
-                                      width: screenWidth * 0.1,
-                                      height: screenWidth * 0.1,
+                                      width: 40,
+                                      height: 40,
                                       decoration: const BoxDecoration(
                                         color: Colors.white,
                                         shape: BoxShape.circle,
@@ -1039,21 +1039,21 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: screenWidth * 0.04),
+                                  const SizedBox(width: 20),
                                   Text(
                                     "$passengers",
                                     style: GoogleFonts.lexend(
-                                      fontSize: screenWidth * 0.05,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                     ),
                                   ),
-                                  SizedBox(width: screenWidth * 0.04),
+                                  const SizedBox(width: 20),
                                   GestureDetector(
                                     onTap: incrementPassengers,
                                     child: Container(
-                                      width: screenWidth * 0.1,
-                                      height: screenWidth * 0.1,
+                                      width: 40,
+                                      height: 40,
                                       decoration: const BoxDecoration(
                                         color: Colors.white,
                                         shape: BoxShape.circle,
@@ -1066,32 +1066,31 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: screenHeight * 0.02),
+                              const SizedBox(height: 20),
 
+                              // Date & Times
                               // Date & Times
                               Text(
                                 "Enter Ride Timings",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 12),
                               Text(
                                 "Date",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 8),
                               _buildTextField(
                                 "Enter Date",
                                 dateController,
-                                screenWidth,
-                                screenHeight,
                                 readOnly: true,
                                 onTap: selectDate,
                                 suffixIcon: Icons.calendar_today,
@@ -1099,21 +1098,19 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                     ? "Please select a date"
                                     : null,
                               ),
-                              SizedBox(height: screenHeight * 0.015),
+                              const SizedBox(height: 15),
                               Text(
                                 "Pickup Time",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 8),
                               _buildTextField(
                                 "Enter Pickup Time",
                                 pickupTimeController,
-                                screenWidth,
-                                screenHeight,
                                 readOnly: true,
                                 onTap: () => selectTime(pickupTimeController),
                                 suffixIcon: Icons.access_time,
@@ -1121,21 +1118,19 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                     ? "Pickup time required"
                                     : null,
                               ),
-                              SizedBox(height: screenHeight * 0.015),
+                              const SizedBox(height: 15),
                               Text(
                                 "Drop Time",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 8),
                               _buildTextField(
                                 "Enter Drop Time",
                                 dropTimeController,
-                                screenWidth,
-                                screenHeight,
                                 readOnly: true,
                                 onTap: () => selectTime(dropTimeController),
                                 suffixIcon: Icons.access_time,
@@ -1143,26 +1138,26 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                     ? "Drop time required"
                                     : null,
                               ),
-                              SizedBox(height: screenHeight * 0.02),
+                              const SizedBox(height: 20),
 
                               // Price
                               Text(
                                 "Enter Ride Price",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 12),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   GestureDetector(
                                     onTap: decrementPrice,
                                     child: Container(
-                                      width: screenWidth * 0.1,
-                                      height: screenWidth * 0.1,
+                                      width: 40,
+                                      height: 40,
                                       decoration: const BoxDecoration(
                                         color: Colors.white,
                                         shape: BoxShape.circle,
@@ -1173,11 +1168,11 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: screenWidth * 0.04),
+                                  const SizedBox(width: 20),
                                   Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: screenWidth * 0.06,
-                                      vertical: screenHeight * 0.01,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 10,
                                     ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
@@ -1190,7 +1185,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                           color: Color(0xFFFF4444),
                                         ),
                                         SizedBox(
-                                          width: screenWidth * 0.15,
+                                          width: 60,
                                           child: TextFormField(
                                             controller: priceController,
                                             textAlign: TextAlign.center,
@@ -1218,12 +1213,12 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                       ],
                                     ),
                                   ),
-                                  SizedBox(width: screenWidth * 0.04),
+                                  const SizedBox(width: 20),
                                   GestureDetector(
                                     onTap: incrementPrice,
                                     child: Container(
-                                      width: screenWidth * 0.1,
-                                      height: screenWidth * 0.1,
+                                      width: 40,
+                                      height: 40,
                                       decoration: const BoxDecoration(
                                         color: Colors.white,
                                         shape: BoxShape.circle,
@@ -1236,18 +1231,19 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: screenHeight * 0.02),
+                              const SizedBox(height: 20),
 
+                              // Description
                               // Description
                               Text(
                                 "Enter Description ",
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.04,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.012),
+                              const SizedBox(height: 12),
                               TextFormField(
                                 controller: descriptionController,
                                 maxLines: 3,
@@ -1256,7 +1252,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                       "Enter description...(Pickup Place - Drop Place)",
                                   hintStyle: GoogleFonts.lexend(
                                     color: Colors.grey[400],
-                                    fontSize: screenWidth * 0.038,
+                                    fontSize: 15,
                                   ),
                                   filled: true,
                                   fillColor: Colors.white,
@@ -1264,13 +1260,13 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide.none,
                                   ),
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: screenWidth * 0.04,
-                                    vertical: screenHeight * 0.018,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
                                   ),
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.025),
+                              const SizedBox(height: 30),
 
                               // Submit
                               // SizedBox(
@@ -1349,31 +1345,14 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                               // ),
                               Center(
                                 child: SizedBox(
-                                  width:
-                                      screenWidth *
-                                      0.6, // smaller width (60% of screen)
-                                  height:
-                                      screenHeight *
-                                      0.065, // smaller fixed height
+                                  width: double.infinity,
+                                  height: 50,
                                   child: ElevatedButton(
                                     onPressed: isSubmitting
                                         ? null
                                         : () async {
                                             if (_formKey.currentState!
                                                 .validate()) {
-                                              // if (profileImage == null) {
-                                              //   ScaffoldMessenger.of(
-                                              //     context,
-                                              //   ).showSnackBar(
-                                              //     const SnackBar(
-                                              //       content: Text(
-                                              //         "Please add a profile picture",
-                                              //       ),
-                                              //     ),
-                                              //   );
-                                              //   return;
-                                              // }
-
                                               // START SUBMIT ANIMATION
                                               setState(() {
                                                 isSubmitting = true;
@@ -1405,8 +1384,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                           },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
-                                      padding: EdgeInsets
-                                          .zero, // important so height comes from SizedBox
+                                      padding: EdgeInsets.zero,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(25),
                                       ),
@@ -1423,36 +1401,37 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                                     BorderRadius.circular(25),
                                                 child: Image.asset(
                                                   "assets/car_loading.gif",
-                                                  fit: BoxFit
-                                                      .cover, // fills the small button
+                                                  fit: BoxFit.cover,
                                                 ),
                                               ),
                                             )
                                           : isPublished
-                                          ? Text(
-                                              "Published!",
-                                              key: const ValueKey('published'),
-                                              style: GoogleFonts.lexend(
-                                                fontSize: screenWidth * 0.045,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.green,
-                                              ),
-                                            )
-                                          : Text(
-                                              "Submit",
-                                              key: const ValueKey('submit'),
-                                              style: GoogleFonts.lexend(
-                                                fontSize: screenWidth * 0.045,
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFFFF4444),
-                                              ),
-                                            ),
+                                              ? Text(
+                                                  "Published!",
+                                                  key: const ValueKey(
+                                                      'published'),
+                                                  style: GoogleFonts.lexend(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.green,
+                                                  ),
+                                                )
+                                              : Text(
+                                                  "Submit",
+                                                  key: const ValueKey('submit'),
+                                                  style: GoogleFonts.lexend(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                    color:
+                                                        const Color(0xFFFF4444),
+                                                  ),
+                                                ),
                                     ),
                                   ),
                                 ),
                               ),
 
-                              SizedBox(height: screenHeight * 0.02),
+                              const SizedBox(height: 20),
                             ],
                           ),
                         ),
@@ -1462,7 +1441,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

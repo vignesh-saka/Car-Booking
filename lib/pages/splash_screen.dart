@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bookmycar/Screens/Comman/main_dashboard.dart';
 import 'package:bookmycar/auth/login_screen.dart';
+import 'package:bookmycar/utils/responsive_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -48,27 +49,43 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // App logo
-            Image.asset(
-              'assets/images/car_splash.png', // your image path
-              height: height * 0.35,
-              width: width * 0.6,
-              fit: BoxFit.contain,
-            ),
-            SizedBox(height: height * 0.02),
-            // App name
-            Text(
-              'Book My Car',
-              style: TextStyle(
-                color: Colors.red.shade700,
-                fontSize: height * 0.035,
-                fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Constrained Box for Web/Desktop
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  children: [
+                    // App logo
+                    Image.asset(
+                      'assets/images/car_splash.png', // your image path
+                      height: ResponsiveWidget.isMobile(context)
+                          ? height * 0.35
+                          : 300, // Fixed height for desktop
+                      width: ResponsiveWidget.isMobile(context)
+                          ? width * 0.6
+                          : 300, // Fixed width for desktop
+                      fit: BoxFit.contain,
+                    ),
+                    SizedBox(height: height * 0.02),
+                    // App name
+                    Text(
+                      'Book My Car',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: ResponsiveWidget.isMobile(context)
+                            ? height * 0.035
+                            : 32, // Fixed font size for desktop
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

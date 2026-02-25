@@ -167,264 +167,209 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFF3B30),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(25),
-              bottomRight: Radius.circular(25),
-            ),
-          ),
-          child: Column(
-            children: [
-              // Profile Header Section
-              Container(
-                padding: EdgeInsets.symmetric(
-                  vertical: screenHeight * 0.03,
-                  horizontal: screenWidth * 0.06,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF3B30),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25),
                 ),
-                child: Column(
-                  children: [
-                    // Title
-                    // Title with Notification Icon
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Center(
-                          child: Text(
-                            'Profile',
-                            style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.06,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const Positioned(
-                          right: 0,
-                          child: NotificationIcon(),
-                        ),
-                      ],
+              ),
+              child: Column(
+                children: [
+                  // Profile Header Section
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 24,
                     ),
-                    SizedBox(height: screenHeight * 0.03),
-
-                    // Profile Image with Edit Button
-                    Stack(
+                    child: Column(
                       children: [
-                        Container(
-                          width: screenWidth * 0.28,
-                          height: screenWidth * 0.28,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 4),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
+                        // Title
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Center(
+                              child: Text(
+                                'Profile',
+                                style: GoogleFonts.lexend(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: _profileImage != null
-                                ? Image.file(_profileImage!, fit: BoxFit.cover)
-                                : Image.asset(
-                                    defaultImagePath,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      // Fallback if image not found
-                                      return Container(
-                                        color: Colors.grey[300],
-                                        child: const Image(
-                                          image: AssetImage(
-                                            'assets/images/profile.png',
-                                          ),
-                                        ),
-                                      );
-                                    },
+                            ),
+                            const Positioned(
+                              right: 0,
+                              child: NotificationIcon(),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Profile Image with Edit Button
+                        Stack(
+                          children: [
+                            Container(
+                              width: 110,
+                              height: 110,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 4),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
                                   ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: _profileImage != null
+                                    ? Image.file(_profileImage!,
+                                        fit: BoxFit.cover)
+                                    : Image.asset(
+                                        defaultImagePath,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Container(
+                                            color: Colors.grey[300],
+                                            child: const Image(
+                                              image: AssetImage(
+                                                'assets/images/profile.png',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // User Name
+                        Text(
+                          userName,
+                          style: GoogleFonts.lexend(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
-                        // Edit Button
-                        //   Positioned(
-                        //     bottom: 0,
-                        //     right: 0,
-                        //     child: GestureDetector(
-                        //       onTap: _showImageSourceDialog,
-                        //       child: Container(
-                        //         width: screenWidth * 0.1,
-                        //         height: screenWidth * 0.1,
-                        //         decoration: BoxDecoration(
-                        //           color: Colors.white,
-                        //           shape: BoxShape.circle,
-                        //           boxShadow: [
-                        //             BoxShadow(
-                        //               color: Colors.black.withOpacity(0.2),
-                        //               blurRadius: 6,
-                        //               offset: const Offset(0, 2),
-                        //             ),
-                        //           ],
-                        //         ),
-                        //         child: Icon(
-                        //           Icons.edit,
-                        //           color: const Color(0xFFFF4444),
-                        //           size: screenWidth * 0.05,
-                        //         ),
-                        //       ),
-                        //     ),
-                        //   ),
+                        const SizedBox(height: 4),
+
+                        // User Email
+                        Text(
+                          userEmail,
+                          style: GoogleFonts.lexend(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
                       ],
                     ),
-                    SizedBox(height: screenHeight * 0.02),
-
-                    // User Name
-                    Text(
-                      userName,
-                      style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.05,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.005),
-
-                    // User Email
-                    Text(
-                      userEmail,
-                      style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.035,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Menu Items
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF3B30),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(25),
-                      bottomRight: Radius.circular(25),
-                    ),
                   ),
-                  child: Column(
-                    children: [
-                      _buildMenuItem(
-                        icon: Icons.settings,
-                        title: 'Settings',
-                        screenWidth: screenWidth,
-                        screenHeight: screenHeight,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsPage(),
-                            ),
-                          );
-                          widget.onTabChange?.call(4); // Profile tab
-                          // ScaffoldMessenger.of(context).showSnackBar(
-                          //   SnackBar(
-                          //     content: Text(
-                          //       'Edit Profile - Coming Soon',
-                          //       style: GoogleFonts.lexend(),
-                          //     ),
-                          //   ),
-                          // );
-                        },
-                      ),
-                      _buildMenuItem(
-                        icon: Icons.bookmark_outline,
-                        title: 'My Bookings',
-                        screenWidth: screenWidth,
-                        screenHeight: screenHeight,
-                        onTap: () {
-                          widget.onTabChange?.call(1); // My Bookings tab
-                          // ScaffoldMessenger.of(context).showSnackBar(
-                          //   SnackBar(
-                          //     content: Text(
-                          //       'My Bookings',
-                          //       style: GoogleFonts.lexend(),
-                          //     ),
-                          //   ),
-                          // );
-                        },
-                      ),
-                      _buildMenuItem(
-                        icon: Icons.history,
-                        title: 'Ride History',
-                        screenWidth: screenWidth,
-                        screenHeight: screenHeight,
-                        onTap: () {
-                          widget.onTabChange?.call(3); // History tab
-                          // ScaffoldMessenger.of(context).showSnackBar(
-                          //   SnackBar(
-                          //     content: Text(
-                          //       'Ride History',
-                          //       style: GoogleFonts.lexend(),
-                          //     ),
-                          //   ),
-                          // );
-                        },
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
 
-                      // Sign Out Button
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.06,
+                  // Menu Items
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF3B30),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(25),
+                          bottomRight: Radius.circular(25),
                         ),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              _showSignOutDialog();
+                      ),
+                      child: Column(
+                        children: [
+                          _buildMenuItem(
+                            icon: Icons.settings,
+                            title: 'Settings',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsPage(),
+                                ),
+                              );
+                              widget.onTabChange?.call(4); // Profile tab
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                vertical: screenHeight * 0.018,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                          ),
+                          _buildMenuItem(
+                            icon: Icons.bookmark_outline,
+                            title: 'My Bookings',
+                            onTap: () {
+                              widget.onTabChange?.call(1); // My Bookings tab
+                            },
+                          ),
+                          _buildMenuItem(
+                            icon: Icons.history,
+                            title: 'Ride History',
+                            onTap: () {
+                              widget.onTabChange?.call(3); // History tab
+                            },
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Sign Out Button
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
                             ),
-                            child: Text(
-                              'Sign Out',
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.045,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFFFF4444),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  _showSignOutDialog();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Sign Out',
+                                  style: GoogleFonts.lexend(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFFF4444),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.05),
+                          const SizedBox(height: 40),
 
-                      Text(
-                        'App Version 5.0.0',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.035,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
+                          Text(
+                            'App Version 5.0.0',
+                            style: GoogleFonts.lexend(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -434,20 +379,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
-    required double screenWidth,
-    required double screenHeight,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.06,
-          vertical: screenHeight * 0.008,
+        margin: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: 6,
         ),
-        padding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.04,
-          vertical: screenHeight * 0.02,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
         ),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.2),
@@ -456,22 +399,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: screenWidth * 0.06),
-            SizedBox(width: screenWidth * 0.04),
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
                 style: GoogleFonts.lexend(
-                  fontSize: screenWidth * 0.042,
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
                 ),
               ),
             ),
-            Icon(
+            const Icon(
               Icons.arrow_forward_ios,
               color: Colors.white,
-              size: screenWidth * 0.04,
+              size: 16,
             ),
           ],
         ),

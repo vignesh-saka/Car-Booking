@@ -113,17 +113,13 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
 
-  Widget _buildRidesList(
-    List<Ride> rides,
-    double screenWidth,
-    double screenHeight,
-  ) {
+  Widget _buildRidesList(List<Ride> rides) {
     if (rides.isEmpty) {
       return Center(
         child: Text(
           'No rides found',
           style: GoogleFonts.lexend(
-            fontSize: screenWidth * 0.04,
+            fontSize: 16,
             color: Colors.white,
           ),
         ),
@@ -131,19 +127,17 @@ class _HistoryScreenState extends State<HistoryScreen>
     }
 
     return ListView.builder(
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.04,
-        vertical: screenHeight * 0.01,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 10,
       ),
       itemCount: rides.length,
       itemBuilder: (context, index) {
         final ride = rides[index];
         return Padding(
-          padding: EdgeInsets.only(bottom: screenHeight * 0.015),
+          padding: const EdgeInsets.only(bottom: 12),
           child: HistoryRideCard(
             ride: ride,
-            screenWidth: screenWidth,
-            screenHeight: screenHeight,
             isLive: _tabController.index == 0,
             onTap: () {
               Navigator.push(
@@ -161,109 +155,104 @@ class _HistoryScreenState extends State<HistoryScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          // fill screen so red container looks like in MyBookingsScreen
-          height: screenHeight,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFF3B30),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(25),
-              bottomRight: Radius.circular(25),
-            ),
-          ),
-          child: Column(
-            children: [
-              SizedBox(height: screenHeight * 0.02),
-
-              // Title (same UI)
-                // Title with Notification Icon
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const SizedBox(width: 40), // Balance the icon
-                      Text(
-                        'History',
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.06,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const NotificationIcon(),
-                    ],
-                  ),
-                ),
-
-              SizedBox(height: screenHeight * 0.02),
-
-              // Tab Bar (matches MyBookingsScreen style)
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  dividerColor: Colors.transparent,
-                  labelColor: Colors.black,
-                  unselectedLabelColor: Colors.black54,
-                  labelStyle: GoogleFonts.lexend(
-                    fontWeight: FontWeight.w600,
-                    fontSize: screenWidth * 0.04,
-                  ),
-                  unselectedLabelStyle: GoogleFonts.lexend(
-                    fontWeight: FontWeight.w400,
-                    fontSize: screenWidth * 0.04,
-                  ),
-                  tabs: const [
-                    Tab(text: 'Live'),
-                    Tab(text: 'Completed'),
-                  ],
-                  onTap: (_) => setState(() {}),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF3B30),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25),
                 ),
               ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
 
-              SizedBox(height: screenHeight * 0.02),
-
-              // Expanded area — only this scrolls (lists)
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF3B30),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(25),
-                      bottomRight: Radius.circular(25),
+                  // Title with Notification Icon
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 40), // Balance the icon
+                        Text(
+                          'History',
+                          style: GoogleFonts.lexend(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const NotificationIcon(),
+                      ],
                     ),
                   ),
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildRidesList(liveRides, screenWidth, screenHeight),
-                      _buildRidesList(
-                        completedRides,
-                        screenWidth,
-                        screenHeight,
+
+                  const SizedBox(height: 20),
+
+                  // Tab Bar (matches MyBookingsScreen style)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 40),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicator: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(25),
                       ),
-                    ],
+                      dividerColor: Colors.transparent,
+                      labelColor: Colors.black,
+                      unselectedLabelColor: Colors.black54,
+                      labelStyle: GoogleFonts.lexend(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                      unselectedLabelStyle: GoogleFonts.lexend(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 16,
+                      ),
+                      tabs: const [
+                        Tab(text: 'Live'),
+                        Tab(text: 'Completed'),
+                      ],
+                      onTap: (_) => setState(() {}),
+                    ),
                   ),
-                ),
+
+                  const SizedBox(height: 20),
+
+                  // Expanded area — only this scrolls (lists)
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF3B30),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(25),
+                          bottomRight: Radius.circular(25),
+                        ),
+                      ),
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildRidesList(liveRides),
+                          _buildRidesList(completedRides),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

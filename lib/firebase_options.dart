@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -51,7 +48,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC0YzYM2SMNib_QNRiqnILXWqieKZrXjqQ',
-    appId: '1:63717521520:android:26a22b8cba9cba5d6e5cb5',
+    appId: '1:63717521520:android:ea9cd55abb1e2a866e5cb5',
     messagingSenderId: '63717521520',
     projectId: 'bookmycar-app',
     storageBucket: 'bookmycar-app.firebasestorage.app',
@@ -63,6 +60,19 @@ class DefaultFirebaseOptions {
     messagingSenderId: '63717521520',
     projectId: 'bookmycar-app',
     storageBucket: 'bookmycar-app.firebasestorage.app',
+    androidClientId: '63717521520-ns94b16to8qrg8k1b7bapasigu7jqn7k.apps.googleusercontent.com',
+    iosClientId: '63717521520-106sqh7ldjvng0thg07i23r81424vb87.apps.googleusercontent.com',
     iosBundleId: 'com.example.bookmycar',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBnmoEDuYaANSe4eO-2B4FUdW7-rJ5Ed_s',
+    appId: '1:63717521520:web:aa90490a0238e5f56e5cb5',
+    messagingSenderId: '63717521520',
+    projectId: 'bookmycar-app',
+    authDomain: 'bookmycar-app.firebaseapp.com',
+    storageBucket: 'bookmycar-app.firebasestorage.app',
+    measurementId: 'G-5VE99GRL4Z',
+  );
+
 }

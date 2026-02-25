@@ -1,6 +1,7 @@
 {
   "projects": {
-    "bookcar": "bookmycar-app"
+    "bookcar": "bookmycar-app",
+    "default": "bookmycar-app"
   },
   "targets": {},
   "etags": {}

@@ -101,10 +101,60 @@ class _MainDashboardState extends State<MainDashboard> {
       child: Scaffold(
         body: SafeArea(
           child: _hasInternet
-              ? IndexedStack(index: _selectedIndex, children: _screens)
+              ? Row(
+                  children: [
+                    // Side Navigation for Desktop/Tablet
+                    if (MediaQuery.of(context).size.width >= 800)
+                      NavigationRail(
+                        selectedIndex: _selectedIndex,
+                        onDestinationSelected: _onItemTapped,
+                        labelType: NavigationRailLabelType.all,
+                        destinations: const [
+                          NavigationRailDestination(
+                            icon: Icon(Icons.add_circle_outline),
+                            selectedIcon: Icon(Icons.add_circle),
+                            label: Text('Publish'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.history),
+                            selectedIcon: Icon(Icons.history_edu),
+                            label: Text('Bookings'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.search),
+                            selectedIcon: Icon(Icons.search_rounded),
+                            label: Text('Search'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.manage_history),
+                            selectedIcon: Icon(Icons.history_toggle_off),
+                            label: Text('History'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.person_outline),
+                            selectedIcon: Icon(Icons.person),
+                            label: Text('Profile'),
+                          ),
+                        ],
+                      ),
+                    
+                    // Vertical Divider
+                     if (MediaQuery.of(context).size.width >= 800)
+                      const VerticalDivider(thickness: 1, width: 1),
+
+                    // Main Content Area
+                    Expanded(
+                      child: IndexedStack(
+                        index: _selectedIndex,
+                        children: _screens,
+                      ),
+                    ),
+                  ],
+                )
               : NoInternetWidget(onRetry: _checkInternet),
         ),
-        bottomNavigationBar: _hasInternet
+        // Bottom Navigation for Mobile (< 800px)
+        bottomNavigationBar: (_hasInternet && MediaQuery.of(context).size.width < 800)
             ? BottomNavigation(
                 selectedIndex: _selectedIndex,
                 onItemTapped: _onItemTapped,

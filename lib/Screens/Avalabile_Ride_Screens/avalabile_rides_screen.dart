@@ -107,256 +107,263 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFF3B30),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(25),
-              bottomRight: Radius.circular(25),
-            ),
-          ),
-          child: Column(
-            children: [
-              // ---------------- HEADER ----------------
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.05,
-                  vertical: screenHeight * 0.025,
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: EdgeInsets.all(screenWidth * 0.02),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white, width: 2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.white,
-                          size: screenWidth * 0.05,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          'Available Rides',
-                          style: GoogleFonts.lexend(
-                            fontSize: screenWidth * 0.055,
-                            fontWeight: FontWeight.w600,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              children: [
+                // ---------------- HEADER ----------------
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new,
                             color: Colors.white,
+                            size: 20,
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(width: screenWidth * 0.01),
-                  ],
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            'Available Rides',
+                            style: GoogleFonts.lexend(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 40), // Balance back button
+                    ],
+                  ),
                 ),
-              ),
 
-              // ---------------- TOP TITLE + CALENDAR ----------------
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Book a Safe & Enjoy Ride',
+                // ---------------- TOP TITLE + CALENDAR ----------------
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Book a Safe & Enjoy Ride',
+                        style: GoogleFonts.lexend(
+                          fontSize: 16,
+                          color: Colors.grey[200],
+                        ),
+                      ),
+
+                      // 🔥 Calendar Icon
+                      GestureDetector(
+                        onTap: pickDate,
+                        child: const Icon(
+                          Icons.calendar_month,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 🔥 Dynamic Selected Date Display
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 24,
+                    top: 4,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      selectedDate,
                       style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.04,
-                        color: Colors.grey[200],
-                      ),
-                    ),
-
-                    // 🔥 Calendar Icon
-                    GestureDetector(
-                      onTap: pickDate,
-                      child: Icon(
-                        Icons.calendar_month,
+                        fontSize: 15,
                         color: Colors.white,
-                        size: screenWidth * 0.07,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
 
-              // 🔥 Dynamic Selected Date Display
-              Padding(
-                padding: EdgeInsets.only(
-                  left: screenWidth * 0.05,
-                  top: screenHeight * 0.005,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    selectedDate,
-                    style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.038,
+                const SizedBox(height: 10),
+
+                // ---------------- RIDES LIST ----------------
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
                       color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(25),
+                        topRight: Radius.circular(25),
+                      ),
                     ),
-                  ),
-                ),
-              ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: fetchRides(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Color(0xFFFF3B30)),
+                            );
+                          }
 
-              SizedBox(height: screenHeight * 0.01),
+                          if (!snapshot.hasData ||
+                              snapshot.data!.docs.isEmpty) {
+                            return _buildNoRidesFound();
+                          }
 
-              // ---------------- RIDES LIST ----------------
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.05,
-                    vertical: screenHeight * 0.01,
-                  ),
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: fetchRides(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        );
-                      }
+                          final docs = snapshot.data!.docs;
+                          // ---------------- FILTERING LOGIC ----------------
+                          final List<DocumentSnapshot> filteredDocs =
+                              docs.where((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
 
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return _buildNoRidesFound(screenWidth, screenHeight);
-                      }
+                            // 1. Get ride coordinates
+                            final rideFromLat = data['fromLatLng']?['lat'];
+                            final rideFromLng = data['fromLatLng']?['lng'];
+                            final rideToLat = data['toLatLng']?['lat'];
+                            final rideToLng = data['toLatLng']?['lng'];
 
-                      final docs = snapshot.data!.docs;
-                      // ---------------- FILTERING LOGIC ----------------
-                      final List<DocumentSnapshot> filteredDocs = docs.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
+                            // 2. Check if we have VALID search coordinates & ride coordinates
+                            bool hasSearchCoords = (widget.fromLat != null &&
+                                widget.fromLng != null &&
+                                widget.toLat != null &&
+                                widget.toLng != null);
 
-                        // 1. Get ride coordinates
-                        final rideFromLat = data['fromLatLng']?['lat'];
-                        final rideFromLng = data['fromLatLng']?['lng'];
-                        final rideToLat = data['toLatLng']?['lat'];
-                        final rideToLng = data['toLatLng']?['lng'];
+                            bool hasRideCoords = (rideFromLat != null &&
+                                rideFromLng != null &&
+                                rideToLat != null &&
+                                rideToLng != null);
 
-                        // 2. Check if we have VALID search coordinates & ride coordinates
-                        bool hasSearchCoords = (widget.fromLat != null &&
-                            widget.fromLng != null &&
-                            widget.toLat != null &&
-                            widget.toLng != null);
+                            if (hasSearchCoords && hasRideCoords) {
+                              // --- DISTANCE BASED FILTERING (60km range) ---
+                              double startDist = _calculateDistance(
+                                widget.fromLat!,
+                                widget.fromLng!,
+                                rideFromLat,
+                                rideFromLng,
+                              );
+                              double endDist = _calculateDistance(
+                                widget.toLat!,
+                                widget.toLng!,
+                                rideToLat,
+                                rideToLng,
+                              );
 
-                        bool hasRideCoords = (rideFromLat != null &&
-                            rideFromLng != null &&
-                            rideToLat != null &&
-                            rideToLng != null);
+                              // Check if both start & end are within 60km
+                              return (startDist <= 60.0 && endDist <= 60.0);
+                            } else {
+                              // --- FALLBACK: EXACT TEXT MATCHING ---
+                              // use case-insensitive or exact match? keeping exact for now to match original logic
+                              // but trimming to be safe
+                              String rFrom =
+                                  (data["fromCity"] ?? "").toString().trim();
+                              String rTo =
+                                  (data["toCity"] ?? "").toString().trim();
+                              String sFrom = widget.from.trim();
+                              String sTo = widget.to.trim();
 
-                        if (hasSearchCoords && hasRideCoords) {
-                          // --- DISTANCE BASED FILTERING (60km range) ---
-                          double startDist = _calculateDistance(
-                            widget.fromLat!,
-                            widget.fromLng!,
-                            rideFromLat,
-                            rideFromLng,
-                          );
-                          double endDist = _calculateDistance(
-                            widget.toLat!,
-                            widget.toLng!,
-                            rideToLat,
-                            rideToLng,
-                          );
+                              return rFrom.toLowerCase() ==
+                                      sFrom.toLowerCase() &&
+                                  rTo.toLowerCase() == sTo.toLowerCase();
+                            }
+                          }).toList();
 
-                          // Check if both start & end are within 60km
-                          return (startDist <= 60.0 && endDist <= 60.0);
-                        } else {
-                          // --- FALLBACK: EXACT TEXT MATCHING ---
-                          // use case-insensitive or exact match? keeping exact for now to match original logic
-                          // but trimming to be safe
-                          String rFrom = (data["fromCity"] ?? "").toString().trim();
-                          String rTo = (data["toCity"] ?? "").toString().trim();
-                          String sFrom = widget.from.trim();
-                          String sTo = widget.to.trim();
+                          if (filteredDocs.isEmpty) {
+                            return _buildNoRidesFound();
+                          }
 
-                          return rFrom.toLowerCase() == sFrom.toLowerCase() &&
-                                 rTo.toLowerCase() == sTo.toLowerCase();
-                        }
-                      }).toList();
+                          return ListView.builder(
+                            itemCount: filteredDocs.length,
+                            itemBuilder: (context, index) {
+                              final data = filteredDocs[index].data()
+                                  as Map<String, dynamic>;
 
-                      if (filteredDocs.isEmpty) {
-                        return _buildNoRidesFound(screenWidth, screenHeight);
-                      }
+                              RideData ride = RideData(
+                                id: filteredDocs[index].id,
+                                departureTime: data["pickupTime"],
+                                arrivalTime: data["dropTime"],
+                                fromCity: data["fromCity"],
+                                toCity: data["toCity"],
+                                driverName: data["riderName"],
+                                driverPhone: data["phoneNumber"],
+                                totalSeats: data["passengers"],
+                                bookedSeats: 0,
+                                price:
+                                    int.tryParse(data["price"].toString()) ?? 0,
+                                date: data["date"],
+                                description: data["description"] ?? '',
+                                driverId: data["createdBy"] ?? '',
+                              );
 
-                      return ListView.builder(
-                        itemCount: filteredDocs.length,
-                        itemBuilder: (context, index) {
-                          final data = filteredDocs[index].data() as Map<String, dynamic>;
-
-                          RideData ride = RideData(
-                            id: filteredDocs[index].id,
-                            departureTime: data["pickupTime"],
-                            arrivalTime: data["dropTime"],
-                            fromCity: data["fromCity"],
-                            toCity: data["toCity"],
-                            driverName: data["riderName"],
-                            driverPhone: data["phoneNumber"],
-                            totalSeats: data["passengers"],
-                            bookedSeats: 0,
-                            price: int.tryParse(data["price"].toString()) ?? 0,
-                            date: data["date"],
-                            description: data["description"] ?? '',
-                            driverId: data["createdBy"] ?? '',
-                          );
-
-                          return RideCard(
-                            ride: ride,
-                            screenWidth: screenWidth,
-                            screenHeight: screenHeight,
-                            onTap: () => onRideSelected(ride),
+                              return RideCard(
+                                ride: ride,
+                                onTap: () => onRideSelected(ride),
+                              );
+                            },
                           );
                         },
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-
-      // ---------------- BOTTOM NAV ----------------
     );
   }
 
-  Widget _buildNoRidesFound(double screenWidth, double screenHeight) {
+  Widget _buildNoRidesFound() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.search_off,
-            size: screenWidth * 0.2,
+            size: 80,
             color: Colors.grey[400],
           ),
-          SizedBox(height: screenHeight * 0.02),
+          const SizedBox(height: 16),
           Text(
             'No rides found',
             style: GoogleFonts.lexend(
-              fontSize: screenWidth * 0.045,
+              fontSize: 18,
               fontWeight: FontWeight.w500,
               color: Colors.grey[600],
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
-             'Try changing the date or location',
-             style: GoogleFonts.lexend(
-               fontSize: screenWidth * 0.035,
-               color: Colors.grey[500],
-             ),
+            'Try changing the date or location',
+            style: GoogleFonts.lexend(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
           ),
         ],
       ),
@@ -400,18 +407,14 @@ class RideData {
   int get availableSeats => totalSeats - bookedSeats;
 }
 
-// ---------------- RIDE CARD (UNCHANGED) ----------------
+// ---------------- RIDE CARD (FIXED SIZES) ----------------
 class RideCard extends StatelessWidget {
   final RideData ride;
-  final double screenWidth;
-  final double screenHeight;
   final VoidCallback onTap;
 
   const RideCard({
     super.key,
     required this.ride,
-    required this.screenWidth,
-    required this.screenHeight,
     required this.onTap,
   });
 
@@ -438,7 +441,7 @@ class RideCard extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.lexend(
-            fontSize: screenWidth * 0.036,
+            fontSize: 15,
             fontWeight: FontWeight.w600, // BOLD
             color: Colors.black87,
           ),
@@ -449,7 +452,7 @@ class RideCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.lexend(
-              fontSize: screenWidth * 0.032,
+              fontSize: 13,
               fontWeight: FontWeight.w400,
               color: Colors.grey[600],
             ),
@@ -463,8 +466,8 @@ class RideCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: screenHeight * 0.015),
-        padding: EdgeInsets.all(screenWidth * 0.04),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -491,21 +494,21 @@ class RideCard extends StatelessWidget {
                       Text(
                         ride.departureTime,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.04,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.black87,
                         ),
                       ),
-                      SizedBox(height: screenHeight * 0.004),
+                      const SizedBox(height: 4),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(
                             Icons.location_on,
-                            size: screenWidth * 0.04,
+                            size: 16,
                             color: Colors.grey[600],
                           ),
-                          SizedBox(width: screenWidth * 0.01),
+                          const SizedBox(width: 4),
 
                           Flexible(child: buildAddress(ride.fromCity, false)),
                         ],
@@ -515,12 +518,12 @@ class RideCard extends StatelessWidget {
                 ),
 
                 /// Arrow icon
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Icon(
                     Icons.arrow_forward,
                     color: Colors.grey[400],
-                    size: screenWidth * 0.05,
+                    size: 20,
                   ),
                 ),
 
@@ -532,21 +535,21 @@ class RideCard extends StatelessWidget {
                       Text(
                         ride.arrivalTime,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.04,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.black87,
                         ),
                       ),
-                      SizedBox(height: screenHeight * 0.004),
+                      const SizedBox(height: 4),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Flexible(child: buildAddress(ride.toCity, true)),
-                          SizedBox(width: screenWidth * 0.01),
+                          const SizedBox(width: 4),
                           Icon(
                             Icons.location_on,
-                            size: screenWidth * 0.04,
+                            size: 16,
                             color: Colors.grey[600],
                           ),
                         ],
@@ -558,21 +561,21 @@ class RideCard extends StatelessWidget {
             ),
 
             /// Divider
-            Divider(height: screenHeight * 0.025, color: Colors.grey[300]),
+            Divider(height: 20, color: Colors.grey[300]),
 
             /// ------------------ DRIVER + PRICE ------------------
             Row(
               children: [
                 CircleAvatar(
-                  radius: screenWidth * 0.05,
+                  radius: 20,
                   backgroundColor: Colors.grey[300],
                   child: Icon(
                     Icons.person,
                     color: Colors.grey[600],
-                    size: screenWidth * 0.05,
+                    size: 20,
                   ),
                 ),
-                SizedBox(width: screenWidth * 0.03),
+                const SizedBox(width: 12),
 
                 Expanded(
                   child: Column(
@@ -583,7 +586,7 @@ class RideCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.038,
+                          fontSize: 15,
                           fontWeight: FontWeight.w500,
                           color: Colors.black87,
                         ),
@@ -591,7 +594,7 @@ class RideCard extends StatelessWidget {
                       Text(
                         ride.driverPhone,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.032,
+                          fontSize: 13,
                           color: Colors.grey[600],
                         ),
                       ),
@@ -602,7 +605,7 @@ class RideCard extends StatelessWidget {
                 Text(
                   'Rs. ${ride.price}',
                   style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.042,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFFFF3B30),
                   ),

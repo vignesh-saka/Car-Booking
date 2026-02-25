@@ -3,21 +3,17 @@
 // ============================================
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';  // 👈 ADDED
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/ride.dart';
 
 class HistoryRideCard extends StatelessWidget {
   final Ride ride;
-  final double screenWidth;
-  final double screenHeight;
   final VoidCallback onTap;
   final bool isLive;
 
   const HistoryRideCard({
     super.key,
     required this.ride,
-    required this.screenWidth,
-    required this.screenHeight,
     required this.onTap,
     required this.isLive,
   });
@@ -39,8 +35,8 @@ class HistoryRideCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: screenHeight * 0.015),
-        padding: EdgeInsets.all(screenWidth * 0.04),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -62,30 +58,30 @@ class HistoryRideCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.035,
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
 
-                      SizedBox(width: screenWidth * 0.02),
+                      const SizedBox(width: 8),
 
                       // From city with icon - use Flexible to prevent overflow
                       Flexible(
                         child: Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.location_on,
-                              size: screenWidth * 0.04,
+                              size: 16,
                               color: Colors.black54,
                             ),
-                            SizedBox(width: screenWidth * 0.01),
+                            const SizedBox(width: 4),
                             Flexible(
                               child: Text(
                                 fromCity,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.lexend(
-                                  fontSize: screenWidth * 0.038,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -98,13 +94,13 @@ class HistoryRideCard extends StatelessWidget {
                 ),
 
                 // Right: price
-                SizedBox(width: screenWidth * 0.02),
+                const SizedBox(width: 8),
                 Text(
                   'Rs: ${ride.price}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.035,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFFFF4444),
                   ),
@@ -112,7 +108,7 @@ class HistoryRideCard extends StatelessWidget {
               ],
             ),
 
-            SizedBox(height: screenHeight * 0.008),
+            const SizedBox(height: 6),
 
             // Second row: end time + to city
             Row(
@@ -122,17 +118,17 @@ class HistoryRideCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.035,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                SizedBox(width: screenWidth * 0.02),
-                Icon(
+                const SizedBox(width: 8),
+                const Icon(
                   Icons.location_on,
-                  size: screenWidth * 0.04,
+                  size: 16,
                   color: Colors.black54,
                 ),
-                SizedBox(width: screenWidth * 0.01),
+                const SizedBox(width: 4),
 
                 // To city (use Flexible)
                 Flexible(
@@ -141,7 +137,7 @@ class HistoryRideCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.lexend(
-                      fontSize: screenWidth * 0.038,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -151,7 +147,7 @@ class HistoryRideCard extends StatelessWidget {
 
             // Only show status button for Live rides
             if (isLive) ...[
-              SizedBox(height: screenHeight * 0.015),
+              const SizedBox(height: 12),
 
               // 👇 DYNAMIC PENDING / NO PENDING USING FIRESTORE
               StreamBuilder<QuerySnapshot>(
@@ -180,8 +176,8 @@ class HistoryRideCard extends StatelessWidget {
                   if (hasPending) {
                     return Container(
                       width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.01,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFF4444),
@@ -191,7 +187,7 @@ class HistoryRideCard extends StatelessWidget {
                         'You have Pending Requests',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.035,
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
                         ),
@@ -200,8 +196,8 @@ class HistoryRideCard extends StatelessWidget {
                   } else {
                     return Container(
                       width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.01,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.blue,
@@ -211,7 +207,7 @@ class HistoryRideCard extends StatelessWidget {
                         'You have No Pending Requests',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.035,
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
                         ),
@@ -222,17 +218,17 @@ class HistoryRideCard extends StatelessWidget {
               ),
             ],
 
-            SizedBox(height: screenHeight * 0.015),
+            const SizedBox(height: 12),
 
             // Driver Info
             Row(
               children: [
                 CircleAvatar(
-                  radius: screenWidth * 0.05,
+                  radius: 20,
                   backgroundColor: Colors.grey[300],
                   child: Icon(Icons.person, color: Colors.grey[600]),
                 ),
-                SizedBox(width: screenWidth * 0.03),
+                const SizedBox(width: 12),
                 // Make driver info flexible to avoid overflow on small screens
                 Flexible(
                   child: Column(
@@ -243,7 +239,7 @@ class HistoryRideCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.038,
+                          fontSize: 15,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -252,7 +248,7 @@ class HistoryRideCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.032,
+                          fontSize: 13,
                           color: Colors.grey[600],
                         ),
                       ),

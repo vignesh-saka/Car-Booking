@@ -1,25 +1,40 @@
 {
-    "functions": {
-        "source": "functions"
-    },
-    "flutter": {
-        "platforms": {
-            "android": {
-                "default": {
-                    "projectId": "bookmycar-app",
-                    "appId": "1:63717521520:android:26a22b8cba9cba5d6e5cb5",
-                    "fileOutput": "android/app/google-services.json"
-                }
-            },
-            "dart": {
-                "lib/firebase_options.dart": {
-                    "projectId": "bookmycar-app",
-                    "configurations": {
-                        "android": "1:63717521520:android:26a22b8cba9cba5d6e5cb5",
-                        "ios": "1:63717521520:ios:72ab508ad7e8697c6e5cb5"
-                    }
-                }
-            }
+  "functions": {
+    "source": "functions"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bookmycar-app",
+          "appId": "1:63717521520:android:ea9cd55abb1e2a866e5cb5",
+          "fileOutput": "android/app/google-services.json"
         }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bookmycar-app",
+          "configurations": {
+            "android": "1:63717521520:android:ea9cd55abb1e2a866e5cb5",
+            "ios": "1:63717521520:ios:72ab508ad7e8697c6e5cb5",
+            "web": "1:63717521520:web:aa90490a0238e5f56e5cb5"
+          }
+        }
+      }
     }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
 }

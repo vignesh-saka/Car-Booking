@@ -3,6 +3,7 @@ import 'package:bookmycar/auth/forgotPassword_screen.dart';
 import 'package:bookmycar/auth/signup_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -192,7 +193,13 @@ class _LoginScreenState extends State<LoginScreen> {
         _isGoogleLoading = true;
       });
 
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: kIsWeb
+            ? "63717521520-7bead2vm21jhlshdk450m9qm8fmaaq42.apps.googleusercontent.com"
+            : null,
+      );
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return;
 
       final GoogleSignInAuthentication googleAuth =
@@ -266,351 +273,356 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 🔴 Red Container (card)
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFF3B30),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(25),
-                  bottomRight: Radius.circular(25),
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: width * 0.08),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(height: height * 0.08),
-                      Center(
-                        child: RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            style: GoogleFonts.lexend(
-                              color: Colors.white,
-                              fontSize: height * 0.022,
-                              fontWeight: FontWeight.w400,
-                            ),
-                            children: [
-                              const TextSpan(text: "Book "),
-                              TextSpan(
-                                text: "Car",
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                // 🔴 Red Container (card)
+                Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B30),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(25),
+                      bottomRight: Radius.circular(25),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: width * 0.08),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(height: height * 0.08),
+                          Center(
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
                                 style: GoogleFonts.lexend(
-                                  fontSize: height * 0.03,
-                                  fontWeight: FontWeight.bold,
                                   color: Colors.white,
+                                  fontSize: height * 0.022,
+                                  fontWeight: FontWeight.w400,
                                 ),
-                              ),
-                              const TextSpan(text: "\nat your "),
-                              TextSpan(
-                                text: "Fingertips",
-                                style: GoogleFonts.lexend(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: height * 0.027,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: height * 0.05),
-                      Text(
-                        "Login",
-                        style: GoogleFonts.lexend(
-                          fontSize: height * 0.027,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: height * 0.03),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Email Address",
-                          style: GoogleFonts.lexend(
-                            fontSize: height * 0.018,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: height * 0.008),
-                      TextFormField(
-                        controller: _emailController,
-                        style: GoogleFonts.lexend(fontSize: height * 0.018),
-                        decoration: InputDecoration(
-                          hintText: "Enter Email Address",
-                          hintStyle: GoogleFonts.lexend(
-                            color: Colors.grey.shade600,
-                            fontSize: height * 0.018,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: height * 0.016,
-                            horizontal: width * 0.04,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none,
-                          ),
-                          errorStyle: GoogleFonts.lexend(
-                            color: Colors.white,
-                            fontSize: height * 0.016,
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter your email";
-                          } else if (!RegExp(
-                            r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
-                          ).hasMatch(value)) {
-                            return "Enter a valid email";
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: height * 0.02),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Password",
-                          style: GoogleFonts.lexend(
-                            fontSize: height * 0.018,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: height * 0.008),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        style: GoogleFonts.lexend(fontSize: height * 0.018),
-                        decoration: InputDecoration(
-                          hintText: "Enter Password",
-                          hintStyle: GoogleFonts.lexend(
-                            color: Colors.grey.shade600,
-                            fontSize: height * 0.018,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: height * 0.016,
-                            horizontal: width * 0.04,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none,
-                          ),
-                          errorStyle: GoogleFonts.lexend(
-                            color: Colors.white,
-                            fontSize: height * 0.016,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: Colors.grey.shade700,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter your password";
-                          } else if (value.length < 6) {
-                            return "Password must be at least 6 characters";
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: height * 0.008),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const ForgotPasswordScreen(),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            "Forgot password?",
-                            style: GoogleFonts.lexend(
-                              color: Colors.white,
-                              fontSize: height * 0.016,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: height * 0.025),
-                      SizedBox(
-                        width: double.infinity,
-                        height: height * 0.055,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          onPressed: _isLoading
-                              ? null
-                              : () {
-                                  if (_formKey.currentState!.validate()) {
-                                    loginUser();
-                                  }
-                                },
-                          child: _isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Color(0xFFFF3B30),
-                                )
-                              : Text(
-                                  "Login",
-                                  style: GoogleFonts.lexend(
-                                    color: const Color(0xFFFF3B30),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: height * 0.022,
+                                children: [
+                                  const TextSpan(text: "Book "),
+                                  TextSpan(
+                                    text: "Car",
+                                    style: GoogleFonts.lexend(
+                                      fontSize: height * 0.03,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                        ),
-                      ),
-                      SizedBox(height: height * 0.02),
-                      Center(
-                        child: GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignUpScreen(),
+                                  const TextSpan(text: "\nat your "),
+                                  TextSpan(
+                                    text: "Fingertips",
+                                    style: GoogleFonts.lexend(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: height * 0.027,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          child: RichText(
-                            text: TextSpan(
-                              text: "Don’t have an account? ",
+                          SizedBox(height: height * 0.05),
+                          Text(
+                            "Login",
+                            style: GoogleFonts.lexend(
+                              fontSize: height * 0.027,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: height * 0.03),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "Email Address",
                               style: GoogleFonts.lexend(
+                                fontSize: height * 0.018,
+                                fontWeight: FontWeight.w500,
                                 color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: height * 0.008),
+                          TextFormField(
+                            controller: _emailController,
+                            style: GoogleFonts.lexend(fontSize: height * 0.018),
+                            decoration: InputDecoration(
+                              hintText: "Enter Email Address",
+                              hintStyle: GoogleFonts.lexend(
+                                color: Colors.grey.shade600,
                                 fontSize: height * 0.018,
                               ),
-                              children: [
-                                TextSpan(
-                                  text: "SignUp",
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: height * 0.016,
+                                horizontal: width * 0.04,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorStyle: GoogleFonts.lexend(
+                                color: Colors.white,
+                                fontSize: height * 0.016,
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Please enter your email";
+                              } else if (!RegExp(
+                                r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
+                              ).hasMatch(value)) {
+                                return "Enter a valid email";
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(height: height * 0.02),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "Password",
+                              style: GoogleFonts.lexend(
+                                fontSize: height * 0.018,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: height * 0.008),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            style: GoogleFonts.lexend(fontSize: height * 0.018),
+                            decoration: InputDecoration(
+                              hintText: "Enter Password",
+                              hintStyle: GoogleFonts.lexend(
+                                color: Colors.grey.shade600,
+                                fontSize: height * 0.018,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: height * 0.016,
+                                horizontal: width * 0.04,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorStyle: GoogleFonts.lexend(
+                                color: Colors.white,
+                                fontSize: height * 0.016,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey.shade700,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Please enter your password";
+                              } else if (value.length < 6) {
+                                return "Password must be at least 6 characters";
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(height: height * 0.008),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ForgotPasswordScreen(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                "Forgot password?",
+                                style: GoogleFonts.lexend(
+                                  color: Colors.white,
+                                  fontSize: height * 0.016,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: height * 0.025),
+                          SizedBox(
+                            width: double.infinity,
+                            height: height * 0.055,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: _isLoading
+                                  ? null
+                                  : () {
+                                      if (_formKey.currentState!.validate()) {
+                                        loginUser();
+                                      }
+                                    },
+                              child: _isLoading
+                                  ? const CircularProgressIndicator(
+                                      color: Color(0xFFFF3B30),
+                                    )
+                                  : Text(
+                                      "Login",
+                                      style: GoogleFonts.lexend(
+                                        color: const Color(0xFFFF3B30),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: height * 0.022,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          SizedBox(height: height * 0.02),
+                          Center(
+                            child: GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SignUpScreen(),
+                                ),
+                              ),
+                              child: RichText(
+                                text: TextSpan(
+                                  text: "Don’t have an account? ",
                                   style: GoogleFonts.lexend(
-                                    fontWeight: FontWeight.bold,
-                                    decoration: TextDecoration.underline,
+                                    color: Colors.white,
+                                    fontSize: height * 0.018,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: "SignUp",
+                                      style: GoogleFonts.lexend(
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: height * 0.06),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: height * 0.03),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.black54)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        "or sign in with",
+                        style: GoogleFonts.lexend(
+                          color: Colors.black87,
+                          fontSize: height * 0.016,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.black54)),
+                  ],
+                ),
+                SizedBox(height: height * 0.02),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: width * 0.15),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: height * 0.055,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4285F4),
+                        padding: EdgeInsets.zero,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                      child: _isGoogleLoading
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: height * 0.035,
+                                  height: height * 0.035,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Image.asset(
+                                      'assets/images/google_logo.png',
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: width * 0.03),
+                                Text(
+                                  'Sign in with Google',
+                                  style: GoogleFonts.lexend(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: height * 0.018,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: height * 0.06),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: height * 0.03),
-            Row(
-              children: [
-                Expanded(child: Divider(color: Colors.black54)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text(
-                    "or sign in with",
-                    style: GoogleFonts.lexend(
-                      color: Colors.black87,
-                      fontSize: height * 0.016,
                     ),
                   ),
                 ),
-                Expanded(child: Divider(color: Colors.black54)),
+                SizedBox(height: height * 0.04),
+                Text(
+                  "2025 @ Book My Car",
+                  style: GoogleFonts.lexend(
+                    fontSize: height * 0.016,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: height * 0.02),
               ],
             ),
-            SizedBox(height: height * 0.02),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: width * 0.15),
-              child: SizedBox(
-                width: double.infinity,
-                height: height * 0.055,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4285F4),
-                    padding: EdgeInsets.zero,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  onPressed: _isGoogleLoading ? null : _signInWithGoogle,
-                  child: _isGoogleLoading
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: const CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: height * 0.035,
-                              height: height * 0.035,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Image.asset(
-                                  'assets/images/google_logo.png',
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: width * 0.03),
-                            Text(
-                              'Sign in with Google',
-                              style: GoogleFonts.lexend(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: height * 0.018,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ),
-            SizedBox(height: height * 0.04),
-            Text(
-              "2025 @ Book My Car",
-              style: GoogleFonts.lexend(
-                fontSize: height * 0.016,
-                color: Colors.black87,
-              ),
-            ),
-            SizedBox(height: height * 0.02),
-          ],
+          ),
         ),
       ),
     );
