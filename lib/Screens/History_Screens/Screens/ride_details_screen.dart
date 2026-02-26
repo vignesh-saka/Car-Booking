@@ -8,6 +8,9 @@ import '../models/ride_request.dart';
 import '../models/ride_request.dart';
 import '../widgets/request_item.dart';
 import 'package:bookmycar/controllers/notification_controller.dart';
+import 'package:bookmycar/Screens/Comman/ride_share_helper.dart';
+import 'package:share_plus/share_plus.dart';
+
 
 class RideDetailsScreen extends StatefulWidget {
   final Ride ride;
@@ -488,6 +491,386 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
   }
 
   // -----------------------------------------------------------------------
+  // Deletion Logic
+  // -----------------------------------------------------------------------
+
+  Future<void> _showDeleteConfirmationDialog() async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Text('Delete Ride', style: GoogleFonts.lexend(fontWeight: FontWeight.w600)),
+          content: Text(
+            'Are you sure you want to delete this ride? ',
+            style: GoogleFonts.lexend(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.lexend(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _handleDeleteRide();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF3B30),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text('Delete', style: GoogleFonts.lexend(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleDeleteRide() async {
+    final rideId = widget.ride.id ?? '';
+    if (rideId.isEmpty) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+    );
+
+    try {
+      // 1. Fetch all ride requests for this ride
+      final List<Map<String, dynamic>> bookersData = [];
+      List<QueryDocumentSnapshot> requestDocs = [];
+      try {
+        final requestsSnapshot = await FirebaseFirestore.instance
+            .collection('ride_requests')
+            .where('rideId', isEqualTo: rideId)
+            .get();
+        requestDocs = requestsSnapshot.docs;
+        for (var doc in requestDocs) {
+          bookersData.add(doc.data() as Map<String, dynamic>);
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch ride_requests: $e");
+      }
+
+      // 2. Identify current user (publisher)
+      final user = FirebaseAuth.instance.currentUser;
+      final String publisherUid = user?.uid ?? '';
+      final String publisherEmail = user?.email ?? '';
+      final String publisherName = user?.displayName ?? 'Publisher';
+
+      // 3. Notify and Email Passengers
+      for (var booking in bookersData) {
+        final String passengerUid = booking['passengerUid'] ?? '';
+        final String passengerName = booking['passengerName'] ?? 'Passenger';
+        
+        // Fetch passenger email from users collection if not in booking (usually not in booking)
+        String passengerEmail = '';
+        if (passengerUid.isNotEmpty) {
+          try {
+            final userDoc = await FirebaseFirestore.instance.collection('users').doc(passengerUid).get();
+            passengerEmail = userDoc.data()?['email'] ?? '';
+          } catch (e) {
+            debugPrint("Failed to fetch user email for $passengerUid: $e");
+          }
+        }
+
+        // Send In-App Notification
+        if (passengerUid.isNotEmpty) {
+          debugPrint("Sending cancellation notification to passenger: $passengerUid");
+          try {
+            await NotificationController().sendNotification(
+              toUserId: passengerUid,
+              title: "Ride Cancelled",
+              body: "The ride from ${widget.ride.from} to ${widget.ride.to} has been cancelled by the driver.",
+              type: "ride_cancelled",
+            );
+          } catch (e) {
+            debugPrint("Failed to send notification to passenger: $e");
+          }
+        } else {
+          debugPrint("Warning: No passengerUid found for booking in ride_requests");
+        }
+
+        // Send Email to passenger
+        if (passengerEmail.isNotEmpty) {
+          try {
+            await FirebaseFirestore.instance.collection('mail').add({
+              'to': passengerEmail,
+              'message': {
+                'subject': '🚨 Ride Cancellation Notice | Book My Car',
+                'html': _buildCancellationEmailHtml(
+                  name: passengerName,
+                  from: widget.ride.from,
+                  to: widget.ride.to,
+                  date: widget.ride.date,
+                ),
+              },
+            });
+          } catch(e) {
+             debugPrint("Failed to enqueue passenger email: $e");
+          }
+        }
+      }
+
+      // 4. Notify and Email Publisher
+      if (publisherUid.isNotEmpty) {
+        debugPrint("Sending deletion notification to publisher: $publisherUid");
+        try {
+          await NotificationController().sendNotification(
+            toUserId: publisherUid,
+            title: "Ride Cancelled",
+            body: "Your ride from ${widget.ride.from} to ${widget.ride.to} has been cancelled.",
+            type: "ride_cancelled",
+          );
+        } catch (e) {
+          debugPrint("Failed to send notification to publisher: $e");
+        }
+      }
+
+      if (publisherEmail.isNotEmpty) {
+        try {
+          await FirebaseFirestore.instance.collection('mail').add({
+            'to': publisherEmail,
+            'message': {
+              'subject': '✅ Ride Deleted Successfully | Book My Car',
+              'html': _buildDeletionEmailHtml(
+                name: publisherName,
+                from: widget.ride.from,
+                to: widget.ride.to,
+                date: widget.ride.date,
+              ),
+            },
+          });
+        } catch(e) {
+          debugPrint("Failed to enqueue publisher email: $e");
+        }
+      }
+
+      // 5. Delete from Firestore
+      // We process these individually with try-catch because Firestore batch operations are atomic. 
+      // If the driver lacks permission to update a passenger's booking, the entire batch fails!
+      
+      // Update passenger ride_requests
+      for (var doc in requestDocs) {
+        try {
+          await doc.reference.update({
+            'status': 'cancelled',
+            'updatedAt': FieldValue.serverTimestamp(),
+            'handledBy': publisherUid,
+          });
+        } catch (e) {
+          debugPrint("Failed to update ride_request status: $e");
+        }
+      }
+
+      // Also update associated bookings so passengers see the cancellation
+      // We wrap the .get() in a try-catch because the driver might not have READ permission for all bookings!
+      try {
+        final bookingsQuery = await FirebaseFirestore.instance
+            .collection('bookings')
+            .where('rideId', isEqualTo: rideId)
+            .get();
+            
+        for (var bDoc in bookingsQuery.docs) {
+          try {
+            await bDoc.reference.update({
+              'status': 'cancelled',
+              'rideRequestStatus': 'cancelled',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          } catch (e) {
+             debugPrint("Failed to update booking status: $e");
+          }
+        }
+      } catch(e) {
+         debugPrint("Failed to fetch bookings for cancellation (likely permission denied): $e");
+      }
+      
+      // Delete or Soft-delete the ride itself
+      try {
+        // Attempt an actual deletion of the ride (since the driver owns it)
+        await FirebaseFirestore.instance.collection('rides').doc(rideId).delete();
+      } catch (e) {
+        debugPrint("Failed to delete ride, falling back to soft-delete: $e");
+        try {
+          // Fallback to a soft-delete if deletion rules are exceptionally strict
+          await FirebaseFirestore.instance.collection('rides').doc(rideId).update({
+            'status': 'cancelled',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } catch (e2) {
+          debugPrint("Failed to soft-delete ride: $e2");
+          // Even if this fails, we successfully notified passengers and updated their bookings.
+          // The ride will effectively be 'dead' even if it still exists in the DB.
+        }
+      }
+
+      // 6. Finalize UI
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ride deleted successfully', style: GoogleFonts.lexend()),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true); // Go back to history with Refresh signal
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting ride: $e', style: GoogleFonts.lexend()),
+            backgroundColor: const Color(0xFFFF3B30),
+          ),
+        );
+      }
+    }
+  }
+
+  String _buildCancellationEmailHtml({required String name, required String from, required String to, required String date}) {
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Ride Cancelled</title>
+</head>
+<body style="margin:0; padding:0; background:#f5f5f5; font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <table width="600" cellpadding="0" cellspacing="0"
+          style="background:#ffffff; border-radius:10px; overflow:hidden;
+          box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:#d32f2f; padding:20px;">
+              <h1 style="color:#ffffff; margin:0;">🚗 Book My Car</h1>
+              <p style="color:#ffffff; margin:6px 0 0;">Ride Cancelled</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px; color:#333;">
+              <h2 style="color:#d32f2f;">🚨 Ride Cancelled</h2>
+
+              <p>Hi <b>$name</b>,</p>
+
+              <p>We're sorry to inform you that the ride you requested/booked has been cancelled by the driver.</p>
+
+              <table width="100%" style="margin-top:15px;">
+                <tr><td><b>From:</b></td><td>$from</td></tr>
+                <tr><td><b>To:</b></td><td>$to</td></tr>
+                <tr><td><b>Date:</b></td><td>$date</td></tr>
+              </table>
+
+              <div style="margin:25px 0; text-align:center;">
+                <span style="background:#d32f2f; color:#fff;
+                padding:12px 24px; border-radius:6px;">
+                  Cancelled
+                </span>
+              </div>
+
+              <p style="font-size:14px; color:#777;">
+                You can search for other available rides in the app.
+              </p>
+
+              <p>— <b>Book My Car Team</b></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#fafafa;
+            padding:15px; font-size:12px; color:#999;">
+              © ${DateTime.now().year} Book My Car
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''';
+  }
+
+  String _buildDeletionEmailHtml({required String name, required String from, required String to, required String date}) {
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Ride Deleted</title>
+</head>
+<body style="margin:0; padding:0; background:#f5f5f5; font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <table width="600" cellpadding="0" cellspacing="0"
+          style="background:#ffffff; border-radius:10px; overflow:hidden;
+          box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:#d32f2f; padding:20px;">
+              <h1 style="color:#ffffff; margin:0;">🚗 Book My Car</h1>
+              <p style="color:#ffffff; margin:6px 0 0;">Ride Deleted</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px; color:#333;">
+              <h2 style="color:#4CAF50;">✅ Ride Deleted Successfully</h2>
+
+              <p>Hi <b>$name</b>,</p>
+
+              <p>Your ride has been successfully deleted. All passengers associated with this ride have been notified of the cancellation.</p>
+
+              <table width="100%" style="margin-top:15px;">
+                <tr><td><b>From:</b></td><td>$from</td></tr>
+                <tr><td><b>To:</b></td><td>$to</td></tr>
+                <tr><td><b>Date:</b></td><td>$date</td></tr>
+              </table>
+
+              <div style="margin:25px 0; text-align:center;">
+                <span style="background:#4CAF50; color:#fff;
+                padding:12px 24px; border-radius:6px;">
+                  Deleted
+                </span>
+              </div>
+
+              <p>— <b>Book My Car Team</b></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#fafafa;
+            padding:15px; font-size:12px; color:#999;">
+              © ${DateTime.now().year} Book My Car
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''';
+  }
+
+  // -----------------------------------------------------------------------
   // UI helpers for address display
   // -----------------------------------------------------------------------
 
@@ -577,7 +960,24 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(width: screenWidth * 0.12),
+                  if (widget.ride.isLive)
+                    IconButton(
+                      onPressed: () => RideShareHelper.shareRide(
+                        context: context,
+                        date: widget.ride.date,
+                        time: widget.ride.startTime,
+                        from: widget.ride.from,
+                        to: widget.ride.to,
+                        availableSeats: widget.ride.totalPassengers,
+                        driverName: widget.ride.driverName,
+                      ),
+                      icon: const Icon(Icons.share, color: Colors.white),
+                    ),
+                  if (widget.ride.isLive)
+                    IconButton(
+                      onPressed: _showDeleteConfirmationDialog,
+                      icon: const Icon(Icons.delete_outline, color: Colors.white),
+                    ),
                 ],
               ),
             ),

@@ -53,7 +53,10 @@ class _HistoryScreenState extends State<HistoryScreen>
           DateTime now = DateTime.now();
 
           for (var doc in snapshot.docs) {
-            Ride ride = Ride.fromFirestore(doc.data(), doc.id);
+            final data = doc.data() as Map<String, Object?>? ?? {};
+            if (data['status'] == 'cancelled') continue; // Hide cancelled rides
+
+            Ride ride = Ride.fromFirestore(data, doc.id);
 
             try {
               // Convert to datetime (expects dd/MM/yyyy)
@@ -75,8 +78,10 @@ class _HistoryScreenState extends State<HistoryScreen>
 
               // Future drop time => live, otherwise completed
               if (rideEndDateTime.isAfter(now)) {
+                ride.isLive = true;
                 tempLive.add(ride);
               } else {
+                ride.isLive = false;
                 tempCompleted.add(ride);
               }
             } catch (e) {

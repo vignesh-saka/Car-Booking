@@ -179,8 +179,9 @@ class NotificationScreen extends StatelessWidget {
         return Icons.directions_car;
       case 'booking_request':
         return Icons.bookmark_add;
-      case 'booking_status':
-        return Icons.check_circle;
+      case 'ride_cancelled':
+      case 'ride_cancelled':
+        return Icons.cancel_outlined;
       default:
         return Icons.notifications;
     }

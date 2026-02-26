@@ -175,6 +175,12 @@ class NotificationController with ChangeNotifier {
         MaterialPageRoute(builder: (_) => const MainDashboard(initialIndex: 1)),
         (route) => false,
       );
+    } else if (type == 'ride_cancelled') {
+       // Navigate to History (Index 3)
+       navigatorKey!.currentState!.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainDashboard(initialIndex: 3)),
+        (route) => false,
+      );
     } else {
         // Default to Notifications Screen
        navigatorKey!.currentState!.push(

@@ -318,10 +318,23 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
   void handleSubmit() {
     // existing save flow handled by saveRideToFirebase
     // kept for compatibility
+    final String fromCity = fromCityController.text.trim();
+    final String toCity = toCityController.text.trim();
+    final String date = dateController.text.trim();
+    final String time = pickupTimeController.text.trim();
+    final String riderName = riderNameController.text.trim();
+    final int passengerCount = passengers;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PublishsucessScreen(
+          from: fromCity,
+          to: toCity,
+          date: date,
+          time: time,
+          passengers: passengerCount,
+          driverName: riderName,
           onGoToHistory: () {
             Navigator.pop(context); // close success screen
             widget.onPublishSuccess?.call();
@@ -414,10 +427,23 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
         const SnackBar(content: Text("Ride Published Successfully!")),
       );
 
+      final String fromCity = fromCityController.text.trim();
+      final String toCity = toCityController.text.trim();
+      final String date = dateController.text.trim();
+      final String time = pickupTimeController.text.trim();
+      final String riderName = riderNameController.text.trim();
+      final int passengerCount = passengers;
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PublishsucessScreen(
+            from: fromCity,
+            to: toCity,
+            date: date,
+            time: time,
+            passengers: passengerCount,
+            driverName: riderName,
             onGoToHistory: () {
               Navigator.pop(context); // close success screen
               widget.onPublishSuccess?.call();
@@ -877,8 +903,8 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
                                 validator: (v) {
                                   if (v == null || v.isEmpty)
                                     return "Name is required";
-                                  if (!RegExp(r'^[a-zA-Z ]+$').hasMatch(v))
-                                    return "Only alphabets allowed";
+                                  if (!RegExp(r'^[a-zA-Z 0-9]+$').hasMatch(v))
+                                    return "Only alphabets and numbers are allowed";
                                   return null;
                                 },
                               ),
@@ -1147,7 +1173,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
 
                               // Price
                               Text(
-                                "Enter Ride Price",
+                                "Enter Ride Price per seat",
                                 style: GoogleFonts.lexend(
                                   fontSize: screenWidth * 0.04,
                                   fontWeight: FontWeight.w500,

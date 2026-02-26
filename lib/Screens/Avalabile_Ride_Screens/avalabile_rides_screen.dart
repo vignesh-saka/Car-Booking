@@ -237,6 +237,8 @@ class _AvailableRidesScreenState extends State<AvailableRidesScreen> {
                       final List<DocumentSnapshot> filteredDocs = docs.where((doc) {
                         final data = doc.data() as Map<String, dynamic>;
 
+                        if (data['status'] == 'cancelled') return false; // Exclude cancelled rides
+
                         // 1. Get ride coordinates
                         final rideFromLat = data['fromLatLng']?['lat'];
                         final rideFromLng = data['fromLatLng']?['lng'];

@@ -12,7 +12,7 @@ class Ride {
   final String price;
   final int totalPassengers;
   final List<RideRequest> requests;
-  final bool isLive;
+  bool isLive;
 
   Ride({
     this.id,

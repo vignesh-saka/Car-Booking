@@ -2,6 +2,7 @@ import 'package:bookmycar/Screens/Avalabile_Ride_Screens/avalabile_rides_screen.
 import 'package:bookmycar/Screens/Avalabile_Ride_Screens/booking_details_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:bookmycar/Screens/Comman/ride_share_helper.dart';
 
 class RideDetailScreen extends StatefulWidget {
   final RideData ride;
@@ -152,7 +153,18 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(width: screenWidth * 0.09),
+                      IconButton(
+                        onPressed: () => RideShareHelper.shareRide(
+                          context: context,
+                          date: widget.ride.date,
+                          time: widget.ride.departureTime,
+                          from: widget.ride.fromCity,
+                          to: widget.ride.toCity,
+                          availableSeats: widget.ride.availableSeats,
+                          driverName: widget.ride.driverName,
+                        ),
+                        icon: const Icon(Icons.share, color: Colors.white),
+                      ),
                     ],
                   ),
 
