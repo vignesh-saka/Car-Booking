@@ -22,6 +22,8 @@ class _HistoryScreenState extends State<HistoryScreen>
   List<Ride> liveRides = [];
   List<Ride> completedRides = [];
 
+  int _loadedCompletedRidesCount = 5; // Initially load latest 5 in completed
+
   @override
   void initState() {
     super.initState();
@@ -122,6 +124,7 @@ class _HistoryScreenState extends State<HistoryScreen>
     List<Ride> rides,
     double screenWidth,
     double screenHeight,
+    {bool isCompletedTab = false}
   ) {
     if (rides.isEmpty) {
       return Center(
@@ -135,13 +138,50 @@ class _HistoryScreenState extends State<HistoryScreen>
       );
     }
 
+    final int displayCount = isCompletedTab
+        ? (rides.length > _loadedCompletedRidesCount ? _loadedCompletedRidesCount : rides.length)
+        : rides.length;
+
     return ListView.builder(
       padding: EdgeInsets.symmetric(
         horizontal: screenWidth * 0.04,
         vertical: screenHeight * 0.01,
       ),
-      itemCount: rides.length,
+      itemCount: displayCount + (isCompletedTab && displayCount < rides.length ? 1 : 0),
       itemBuilder: (context, index) {
+        if (isCompletedTab && index == displayCount) {
+          // Render Load More Button
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            child: Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFFFF3B30),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.06, 
+                    vertical: screenHeight * 0.015
+                  ),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _loadedCompletedRidesCount += 5; // Load next 5 rides
+                  });
+                },
+                child: Text(
+                  'Load More',
+                  style: GoogleFonts.lexend(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
         final ride = rides[index];
         return Padding(
           padding: EdgeInsets.only(bottom: screenHeight * 0.015),
@@ -263,6 +303,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                         completedRides,
                         screenWidth,
                         screenHeight,
+                        isCompletedTab: true,
                       ),
                     ],
                   ),

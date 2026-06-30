@@ -403,6 +403,24 @@ class RequestItem extends StatelessWidget {
                   fontSize: screenWidth * 0.035,
                 ),
               ),
+            )
+          else if (status == 'cancelled')
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.orange, width: 2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'CANCELLED',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.lexend(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.w600,
+                  fontSize: screenWidth * 0.035,
+                ),
+              ),
             ),
         ],
       ),

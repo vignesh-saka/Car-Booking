@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 // import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart'; // <-- added
+import 'package:bookmycar/api_keys.dart';
 
 /// PublishRideScreen with Google Places Autocomplete + Place Details
 /// Autocomplete triggers after >=3 characters and is restricted to India.
@@ -72,7 +73,7 @@ class _PublishRideScreenState extends State<PublishRideScreen> {
   LatLngPair? toLatLng;
 
   // YOUR GOOGLE API KEY (restrict it in production)
-  static const String googleApiKey = 'AIzaSyCwizUugA6ySbo1PnnuNdPxGDXHPZAWtjY';
+  static const String googleApiKey = ApiKeys.googleApiKey;
 
   // Other state
   int passengers = 1;

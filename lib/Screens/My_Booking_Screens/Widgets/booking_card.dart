@@ -1,6 +1,10 @@
 import 'package:bookmycar/Screens/My_Booking_Screens/Model/models.dart';
+import 'package:bookmycar/controllers/notification_controller.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class BookingCard extends StatelessWidget {
   final Booking booking;
@@ -60,7 +64,6 @@ class BookingCard extends StatelessWidget {
     );
   }
 
-  // --------- POPUP FOR PASSENGER DETAILS ---------
   // --------- POPUP FOR PASSENGER DETAILS ---------
 void _showPassengerPopup(BuildContext context) {
   final passengers = booking.passengers;
@@ -184,6 +187,179 @@ Widget _detailRow(String label, String value) {
   );
 }
 
+// --------- DELETE RIDE LOGIC ---------
+Future<void> _cancelRide(BuildContext context) async {
+  final navigator = Navigator.of(context);
+  final scaffoldState = ScaffoldMessenger.of(context);
+
+  try {
+    // 1. Soft-delete booking from Firestore by updating status to 'cancelled'
+    await FirebaseFirestore.instance.collection('bookings').doc(booking.id).update({
+      'status': 'cancelled',
+    });
+
+    // 1b. Synchronize with ride_requests so driver sees CANCELLED in History
+    final rideRequestsSnapshot = await FirebaseFirestore.instance
+        .collection('ride_requests')
+        .where('bookingId', isEqualTo: booking.id)
+        .get();
+
+    for (var doc in rideRequestsSnapshot.docs) {
+      await doc.reference.update({
+        'status': 'cancelled',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // 2. Fetch driver (the creator of the ride) email to notify them
+    final rideSnapshot = await FirebaseFirestore.instance.collection('rides').doc(booking.rideId).get();
+    if (rideSnapshot.exists) {
+      final rideData = rideSnapshot.data() as Map<String, dynamic>;
+      final String driverId = rideData['createdBy'] ?? '';
+      
+      if (driverId.isNotEmpty) {
+        final driverDoc = await FirebaseFirestore.instance.collection('users').doc(driverId).get();
+        if (driverDoc.exists) {
+          final driverData = driverDoc.data() ?? {};
+          final String driverEmail = (driverData['email'] ?? '').toString().trim();
+          final String driverName = (driverData['name'] ?? 'Driver').toString().trim();
+
+          final currentUser = FirebaseAuth.instance.currentUser;
+          final userDoc = currentUser != null ? await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get() : null;
+          final String passengerName = userDoc != null ? (userDoc.data()?['name'] ?? 'A passenger') : 'A passenger';
+
+          // Send Email
+          if (driverEmail.isNotEmpty) {
+            await FirebaseFirestore.instance.collection("mail").add({
+              "to": driverEmail,
+              "message": {
+                "subject": "❌ Ride Cancelled | Book My Car",
+                "text": "Hi $driverName,\n\n$passengerName has cancelled their booking for your ride.\n\nRoute: ${booking.from} → ${booking.to}\nDate: ${booking.date}\nPickup Time: ${booking.startTime}\n\n— Book My Car Team",
+                "html": '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Ride Cancelled</title>
+</head>
+<body style="margin:0; padding:0; background:#f5f5f5; font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <table width="600" cellpadding="0" cellspacing="0"
+          style="background:#ffffff; border-radius:10px; overflow:hidden;
+          box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:#d32f2f; padding:20px;">
+              <h1 style="color:#ffffff; margin:0;">🚗 Book My Car</h1>
+              <p style="color:#ffffff; margin:6px 0 0;">Booking Cancelled</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px; color:#333;">
+              <h2 style="color:#d32f2f;">❌ A Passenger Cancelled Their Booking</h2>
+
+              <p>Hi <b>$driverName</b>,</p>
+
+              <p><b>$passengerName</b> has cancelled their booking for your ride. Here are the details of the ride:</p>
+
+              <table width="100%" style="margin-top:15px;">
+                <tr><td><b>From:</b></td><td>${booking.from}</td></tr>
+                <tr><td><b>To:</b></td><td>${booking.to}</td></tr>
+                <tr><td><b>Date:</b></td><td>${booking.date}</td></tr>
+                <tr><td><b>Pickup Time:</b></td><td>${booking.startTime}</td></tr>
+              </table>
+
+              <p style="font-size:14px; color:#777; margin-top:25px">
+                The seats have been freed up for other passengers to book.
+              </p>
+
+              <p>— <b>Book My Car Team</b></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#fafafa;
+            padding:15px; font-size:12px; color:#999;">
+              © ${DateTime.now().year} Book My Car
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+''',
+              },
+            });
+          }
+
+          // Send Push Notification
+          await NotificationController().sendNotification(
+            toUserId: driverId,
+            title: "Booking Cancelled",
+            body: "$passengerName cancelled their booking for your ride on ${booking.date}.",
+            type: "booking_cancelled",
+          );
+        }
+      }
+    }
+
+    scaffoldState.showSnackBar(
+      const SnackBar(content: Text('Ride cancelled successfully.')),
+    );
+  } catch (e) {
+    debugPrint('Error cancelling ride: $e');
+    scaffoldState.showSnackBar(
+      const SnackBar(content: Text('Failed to cancel ride. Please try again later.')),
+    );
+  }
+}
+
+void _showDeleteConfirmation(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        backgroundColor: Colors.white,
+        title: Text(
+          'Cancel Ride',
+          style: GoogleFonts.lexend(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          'Are you sure you want to cancel this booking? This action cannot be undone and the driver will be notified.',
+          style: GoogleFonts.lexend(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Keep It', style: GoogleFonts.lexend(color: Colors.grey[700])),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF3B30),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _cancelRide(context);
+            },
+            child: Text('Cancel Ride', style: GoogleFonts.lexend(color: Colors.white)),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -197,6 +373,49 @@ Widget _detailRow(String label, String value) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ===================== DATE OF RIDE & DELETE ICON =====================
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: screenWidth * 0.045,
+                    color: Colors.black54,
+                  ),
+                  SizedBox(width: screenWidth * 0.02),
+                  Text(
+                    booking.date,
+                    style: GoogleFonts.lexend(
+                      fontSize: screenWidth * 0.038,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              if (booking.status.toLowerCase() == 'accepted' && !booking.isCompleted)
+                GestureDetector(
+                  onTap: () => _showDeleteConfirmation(context),
+                  child: Container(
+                    padding: EdgeInsets.all(screenWidth * 0.015),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.delete_outline,
+                      color: const Color(0xFFFF3B30),
+                      size: screenWidth * 0.05,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+
+          SizedBox(height: screenHeight * 0.015),
+
           // ===================== TOP ROW =====================
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -273,7 +492,7 @@ Widget _detailRow(String label, String value) {
 
           // ===================== DRIVER INFO + DESCRIPTION =====================
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: booking.isCompleted ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 radius: screenWidth * 0.05,
@@ -304,13 +523,41 @@ Widget _detailRow(String label, String value) {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Text(
-                      booking.driverPhone,
-                      style: GoogleFonts.lexend(
-                        fontSize: screenWidth * 0.032,
-                        color: Colors.grey[600],
+                    if (!booking.isCompleted)
+                      Row(
+                        children: [
+                          Text(
+                            booking.driverPhone,
+                            style: GoogleFonts.lexend(
+                              fontSize: screenWidth * 0.032,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          SizedBox(width: screenWidth * 0.03),
+                          GestureDetector(
+                            onTap: () async {
+                              final Uri url = Uri.parse('tel:${booking.driverPhone}');
+                              if (await canLaunchUrl(url)) {
+                                await launchUrl(url);
+                              } else {
+                                debugPrint('Could not launch $url');
+                              }
+                            },
+                            child: Container(
+                              padding: EdgeInsets.all(screenWidth * 0.015),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.call,
+                                color: Colors.green,
+                                size: screenWidth * 0.04,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
                   ],
                 ),
               ),

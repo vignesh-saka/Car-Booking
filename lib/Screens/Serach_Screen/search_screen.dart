@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:bookmycar/widgets/notification_icon.dart';
+import 'package:bookmycar/api_keys.dart';
 
 /// SearchScreen with Google Places Autocomplete (India-only) for From/To fields.
 /// Autocomplete triggers after 3 characters and uses a session token.
@@ -78,7 +79,7 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _toAdminArea;
 
   // Google API key (you provided earlier). Restrict this in production.
-  static const String googleApiKey = 'AIzaSyCwizUugA6ySbo1PnnuNdPxGDXHPZAWtjY';
+  static const String googleApiKey = ApiKeys.googleApiKey;
 
   @override
   void initState() {

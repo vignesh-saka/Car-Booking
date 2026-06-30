@@ -577,13 +577,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                       color: Colors.black87,
                                     ),
                                   ),
-                                  Text(
-                                    widget.ride.driverPhone,
-                                    style: GoogleFonts.lexend(
-                                      fontSize: screenWidth * 0.032,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),

@@ -24,6 +24,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int selectedIndex = 1; // My Bookings tab selected
+  int _loadedAllBookingsCount = 3; // Initially load 3 items in All Bookings
 
   void _listenForBookingStatusChanges(String uid) {
     _bookingSub?.cancel();
@@ -298,7 +299,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return null;
   }
 
-  bool _isCompletedByDate(String dateString) {
+  bool _isCompletedByDateOrStatus(String dateString, String status) {
+    if (status.toLowerCase() == 'cancelled') return true;
+
     final dt = _tryParseDate(dateString);
     if (dt == null) return false;
     final today = DateTime.now();
@@ -431,7 +434,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       price: price ?? '',
       passengerCount: passengerCount,
       status: status,
-      isCompleted: _isCompletedByDate(date ?? ''),
+      isCompleted: _isCompletedByDateOrStatus(date ?? '', status),
       description: data['description']?.toString() ?? '',
       passengerName: passengerName,
       passengerAge: passengerAge,
@@ -662,6 +665,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                           completedBookings,
                           screenWidth,
                           screenHeight,
+                          isAllBookings: true,
                         ),
                       ],
                     ),
@@ -679,6 +683,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     List<Booking> bookings,
     double screenWidth,
     double screenHeight,
+    {bool isAllBookings = false}
   ) {
     if (bookings.isEmpty) {
       return Center(
@@ -692,13 +697,50 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       );
     }
 
+    final int displayCount = isAllBookings
+        ? (bookings.length > _loadedAllBookingsCount ? _loadedAllBookingsCount : bookings.length)
+        : bookings.length;
+
     return ListView.builder(
       padding: EdgeInsets.symmetric(
         horizontal: screenWidth * 0.04,
         vertical: screenHeight * 0.01,
       ),
-      itemCount: bookings.length,
+      itemCount: displayCount + (isAllBookings && displayCount < bookings.length ? 1 : 0),
       itemBuilder: (context, index) {
+        if (isAllBookings && index == displayCount) {
+          // Render Load More Button
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            child: Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFFFF3B30),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.06, 
+                    vertical: screenHeight * 0.015
+                  ),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _loadedAllBookingsCount += 5; // Load next 5
+                  });
+                },
+                child: Text(
+                  'Load More',
+                  style: GoogleFonts.lexend(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
         return BookingCard(
           booking: bookings[index],
           screenWidth: screenWidth,

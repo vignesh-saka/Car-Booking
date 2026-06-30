@@ -590,13 +590,6 @@ class RideCard extends StatelessWidget {
                           color: Colors.black87,
                         ),
                       ),
-                      Text(
-                        ride.driverPhone,
-                        style: GoogleFonts.lexend(
-                          fontSize: screenWidth * 0.032,
-                          color: Colors.grey[600],
-                        ),
-                      ),
                     ],
                   ),
                 ),

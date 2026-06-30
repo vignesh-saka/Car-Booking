@@ -340,13 +340,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                                       color: Colors.black87,
                                     ),
                                   ),
-                                  Text(
-                                    widget.ride.driverPhone,
-                                    style: GoogleFonts.lexend(
-                                      fontSize: screenWidth * 0.035,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),

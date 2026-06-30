@@ -48,6 +48,28 @@ class HistoryRideCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ===================== DATE OF RIDE =====================
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  size: screenWidth * 0.045,
+                  color: Colors.black54,
+                ),
+                SizedBox(width: screenWidth * 0.02),
+                Text(
+                  ride.date,
+                  style: GoogleFonts.lexend(
+                    fontSize: screenWidth * 0.038,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            
+            SizedBox(height: screenHeight * 0.015),
+
             // Time and Location (top row)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
